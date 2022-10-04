@@ -12,3 +12,22 @@ class Automator(object):
     (scanning across the sky).
     """
 
+    def __init__(self, redis_endpoint, redis_chan):
+        """Initialise automator.
+
+        Args:
+            redis_endpoint (str): Redis endpoint (of the form 
+            <host IP address>:<port>)
+            redis_chan (str): Name of Redis channel. 
+        
+        Returns:
+            None
+        """
+        log.info('Starting Automator:\n'
+                 'Redis endpoint: {}\n'
+                 'Listening on: {}\n'.format(redis_endpoint, redis_chan)) 
+        redis_host, redis_port = redis_endpoint.split(':')
+        self.redis_server = redis.StrictRedis(host=redis_host, 
+                                              port=redis_port, 
+                                              decode_responses=True)
+        self.redis_chan = redis_chan
