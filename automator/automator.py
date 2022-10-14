@@ -31,3 +31,18 @@ class Automator(object):
                                               port=redis_port, 
                                               decode_responses=True)
         self.redis_chan = redis_chan
+
+
+    def start(self, )
+
+    def parse_xml_meta(self, )
+
+    def change_state(self, )
+
+    def waiting(self,)
+
+    def configure(self, )
+        
+    def record(self, )
+
+    def process(self, )
