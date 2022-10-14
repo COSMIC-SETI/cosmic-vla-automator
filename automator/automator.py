@@ -45,12 +45,15 @@ class Automator(object):
         for msg in ps.listen():
             self.parse_xml_meta(msg)
 
-    def _parse_xml_meta(self, ):
+    def _parse_xml_meta(self, meta):
         """Parses the incoming metadata and does the following:
 
         1. Determines telescope observing state
         2. Changes the automator state in response
         3. Retrieves and transmits any metadata if necessary
+         
+        Args:
+            meta (dict): standard COSMIC metadata dictionary
         """
 
     def _idle(self):
