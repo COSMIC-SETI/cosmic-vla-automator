@@ -23,7 +23,7 @@ class Automator(object):
     the automator is to determine what instructions (if any) to deliver to the 
     processing nodes. 
 
-    System states (stop and stare):
+    Automator system states (stop and stare):
 
     - deconfigured
     - configured
@@ -36,6 +36,12 @@ class Automator(object):
     - deconfigured
     - configured
     - tracking
+
+    Pipeline states:
+
+    - pipeline-idle
+    - pipeline-busy
+    - pipeline-error
 
     """
 
@@ -59,6 +65,7 @@ class Automator(object):
         self.status_key = status_key
         self.system_state = 'deconfigure'
         self.telescope_state = 'unknown'
+        self.pipeline_state = self.redis_server.get('pipeline_status')
 
     def start(self):
         """Start the automator. Actions to be taken depend on the incoming 
@@ -69,71 +76,71 @@ class Automator(object):
         log.info('Listening to status key: {}'.format(self.status_key)) 
         for key_cmd in ps.listen():
             if(key_cmd['data'] == 'set'):
-                telescope_status = self.redis_server.get(self.status_key)     
-                self._update(telescope_status)
+                telescope_state = self.redis_server.get(self.status_key)     
+                self._update(telescope_state)
     
-    def _update(self, telescope_status):
+    def _update(self, telescope_state):
         """Determine what to do (if anything) in response to a change 
-        in telescope state.
+        in telescope state or pipeline state.
         """
-        log.info("New telescope state: {}".format(telescope_status)) 
+        self.telescope_state = telescope_state
+        log.info("New telescope state: {}".format(telescope_state)) 
         states = {'configured':self._configure,
                   'tracking':self._tracking,
                   'deconfigured':self._deconfigure}       
-        return states.get(telescope_status, self._ignored_state)
+        return states.get(telescope_state, self._ignored_state)
 
     def _configure(self):
         """The telescope is configured, but not tracking a source.
         """       
-        self.telescope_state = 'configured'
         if(self.system_state == 'tracking'):
             result = Interface.stop_recording()
             if(result == 0):
                 self.system_state = 'configured'
+                log.info("Tracking stopped, system in state 'configured'")
         elif(self.system_state == 'deconfigured'):
             result = Interface.configure()
             if(result == 0):
                 self.system_state = 'configured'
+                log.info("System configured")
         else:
             log.info("System in state {}; ignoring telescope state {}".format(self.system_state, self.telescope_state))
 
-    def _configure(self):
-        """The automator will request that the COSMIC backend systems prepare
-        for recording.
+    def _tracking(self):
+        """If appropriate, the automator will instruct backend processes to record. 
         """
-        if(self.state is not 'idle'):
-            log.info("Not in idle state, therefore not configuring.")
-            return
-        self.state = 'configuring'
-        result = Interface.configure()
-        if(result == 0):
-            self.state = 'configured'
-            log.info("The automator is in state CONFIGURED.")
-            # Will publish a message to slack here
-        else:
-            log.info("Configuration failed. Returning to state IDLE")
-            self.state = 'idle'
 
-    def _record(self):
-        """The automator will instruct the COSMIC backend systems to record. 
-        """
-        if(self.state is not 'configured'):
-            log.info("Not ready for new recording.")
-            return
-        self.state = 'recording'
-        log.info("The automator is in state RECORD.")
-        result = Interface.record()
-        if(result == 0):
-            log.info("Recording successful.")
-            self.state = 'recorded'
-            self._process()
+        if(self.system_state == 'deconfigured'):
+            log.info('Telescope is tracking, but the system is not configured')
+            log.info('Attempting configuration')
+            result = Interface.configure()
+            if(result == 0):
+                self.system_state = 'configured'
+                log.info('System configured')
+
+        elif((self.system_state == 'configured') & (self.pipeline_state == 'pipeline-idle')):
+            log.info('Initiating recording')
+            # note: Interface.record() should return when recording
+            # has started successfully. 
+            result = Interface.record()
+            if(result == 0):
+                self.system_state = 'record'
+                log.info('System recording')
+        
         else:
-            log.info("Recording failed. Returning to state CONFIGURED.")
-            self.state = 'configured'
+            log.info('Telescope is tracking, but system state is {} and pipeline state is {}'.format(self.system_state, self.pipeline_state))      
+            log.info('Not recording')
+                
+
+
+
         
     def _process(self):
         """The automator will instruct the COSMIC backend systems to process. 
         """
+
+        if(self.system_state)
+
         if(self.state is not 'recorded'):
             log.info("Not ready to process.")
             return
