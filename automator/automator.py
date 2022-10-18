@@ -91,6 +91,7 @@ class Automator(object):
         log.info('Listening to control key: {}'.format(self.control_key)) 
         for key_cmd in ps.listen():
             if(key_cmd['data'] == 'set'):
+                status_key = key_cmd['channel'].split(':')[1]
                 val = self.redis_server.get(status_key)    
                 if(status_key == self.telescope_status_key):
                     log.info("New telescope state: {}".format(val)) 
