@@ -73,7 +73,7 @@ class Automator(object):
         self.telescope_status_key = telescope_status_key
         self.pipeline_status_key = pipeline_status_key
         self.control_key = control_key # Set this key to manually control operations
-        self.system_state = 'deconfigure'
+        self.system_state = 'deconfigure' # Default assumed system state
         self.telescope_state = self.redis_server.get(telescope_status_key)
         self.pipeline_state = self.redis_server.get(pipeline_status_key)
         self.control = self.redis_server.get(control_key)
@@ -205,3 +205,9 @@ class Automator(object):
                 log.info('Postprocessing completed, returning to system state: configured')
         else:
             "Not postprocessing; telescope state: {}, system state {}".format(self.telescope_state, self.system_state)
+
+    def _deconfigure(self):
+        """Any tasks that should take place upon deconfigure are
+        launched here.
+        """
+        Interface.deconfigure()
