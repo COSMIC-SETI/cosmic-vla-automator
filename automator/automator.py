@@ -30,6 +30,7 @@ class Automator(object):
     - recording
     - recording_complete
     - processing
+    - processing_complete
     - postprocessing
 
     Telescope states (what the telescope is actually doing):
@@ -122,7 +123,7 @@ class Automator(object):
                 self.system_state = 'configured'
                 log.info('System configured')
 
-        elif((self.system_state == 'configured') & (self.pipeline_state == 'pipeline-idle')):
+        if((self.system_state == 'configured') & (self.pipeline_state == 'pipeline-idle')):
             log.info('Initiating recording')
             # note: Interface.record() should return when recording
             # has started successfully. 
@@ -130,7 +131,7 @@ class Automator(object):
             if(result == 0):
                 self.system_state = 'record'
                 log.info('System recording')
-        
+
         else:
             log.info('Telescope is tracking, but system state is {} and pipeline state is {}'.format(self.system_state, self.pipeline_state))      
             log.info('Not recording')
@@ -150,28 +151,18 @@ class Automator(object):
             log.info('Recording completed, proceeding to processing')
             self._process()
         
-
-        
     def _process(self):
         """The automator will instruct the COSMIC backend systems to process. 
         """
-
-        if(self.system_state)
-
-        if(self.state is not 'recorded'):
-            log.info("Not ready to process.")
-            return
-        self.state = 'processing'
-        log.info("The automator is in state PROCESSING")
-        result = Interface.process()
-        if(result == 0):
-            log.info("Processing successful.")
-            self.state = 'processed'
-            self._cleanup()
+        if(self.system_state == 'recording_complete'):
+            result = Interface.process()
+            if(result == 0):
+                self.system_state = 'processing_complete'
+                log.info('Processing completed, proceeding to postprocessing')
+                self._postprocessing()
         else:
-            log.info("Processing failed. Returning to state RECORDED.")
-            self.state = 'recorded'
-            # Will implement horrid recursive retries here
+            "Not processing; telescope state: {}, system state {}".format(self.telescope_state, self.system_state)
+
 
     def _cleanup(self):
         """The automator will instruct the COSMIC backend systems to perform
