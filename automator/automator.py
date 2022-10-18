@@ -1,4 +1,4 @@
-import Redis
+import redis
 
 from .interface import Interface
 from .logger import log
@@ -91,7 +91,7 @@ class Automator(object):
         log.info('Listening to control key: {}'.format(self.control_key)) 
         for key_cmd in ps.listen():
             if(key_cmd['data'] == 'set'):
-                status_key = key_cmd['channel'].split(':')[1]
+                status_key = key_cmd['channel'].split(':')[1] # determine which key was changed
                 val = self.redis_server.get(status_key)    
                 if(status_key == self.telescope_status_key):
                     log.info("New telescope state: {}".format(val)) 
@@ -120,6 +120,11 @@ class Automator(object):
                       'pipeline-idle':self._pipeline_idle,
                       'pipeline-error':self._pipeline_error}       
         return states.get(new_state, self._ignored_state)
+
+    def _ignored_state(self):
+        """Default response for unrecognised states.
+        """
+        log.info('Unrecognised state; ignoring.')
 
     def _configure(self):
         """The telescope is configured, but not tracking a source.
@@ -200,4 +205,3 @@ class Automator(object):
                 log.info('Postprocessing completed, returning to system state: configured')
         else:
             "Not postprocessing; telescope state: {}, system state {}".format(self.telescope_state, self.system_state)
-
