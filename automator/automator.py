@@ -33,6 +33,9 @@ class Automator(object):
     - processing_complete
     - postprocessing
 
+    These are all states at which point a human operator may wish to pause 
+    operations. 
+
     Telescope states (what the telescope is actually doing):
 
     - deconfigured
@@ -44,6 +47,9 @@ class Automator(object):
     - pipeline-idle (not recording)
     - pipeline-busy (recording)
     - pipeline-error 
+
+    TODO: implement retries for certain operations
+    TODO: implement slack notifications for operational stages
 
     """
 
@@ -163,22 +169,15 @@ class Automator(object):
         else:
             "Not processing; telescope state: {}, system state {}".format(self.telescope_state, self.system_state)
 
-
-    def _cleanup(self):
-        """The automator will instruct the COSMIC backend systems to perform
-        any required cleanup operations (e.g. emptying the NVMe modules). 
+    def _postprocessing(self):
+        """Postprocessing initiated here.
         """
-        if(self.state is not 'processed'):
-            log.info("Not ready for cleanup.")
-            return
-        self.state = 'cleaning'
-        log.info("The automator is in state CLEANING")
-        result = Interface.cleanup()
-        if(result == 0):
-            log.info("Cleanup successful. Returning to state CONFIGURED")
-            self.state = 'configured'
+        if(self.system_state == 'processing_complete'):
+            result = Interface.postprocess()
+            if(result == 0):
+                self.system_state = 'configured'
+                log.info('Postprocessing completed, returning to system state: configured')
         else:
-            log.info("Cleanup failed. Returning to state PROCESSED.")
-            self.state = 'processed'
-            # Will implement recursive retries here
+            "Not postprocessing; telescope state: {}, system state {}".format(self.telescope_state, self.system_state)
+
 
