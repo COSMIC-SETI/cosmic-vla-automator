@@ -28,24 +28,25 @@ class Automator(object):
     - deconfigured
     - configured
     - recording
+    - recording_complete
     - processing
     - postprocessing
 
-    Telescope states (stop and stare):
+    Telescope states (what the telescope is actually doing):
 
     - deconfigured
     - configured
     - tracking
 
-    Pipeline states:
+    Pipeline states (what the pipeline is actually doing):
 
-    - pipeline-idle
-    - pipeline-busy
-    - pipeline-error
+    - pipeline-idle (not recording)
+    - pipeline-busy (recording)
+    - pipeline-error 
 
     """
 
-    def __init__(self, redis_endpoint, status_key):
+    def __init__(self, redis_endpoint, telescope_status_key, pipeline_status_key, control_channel):
         """Initialise automator.
 
         Args:
@@ -62,10 +63,12 @@ class Automator(object):
         self.redis_server = redis.StrictRedis(host=redis_host, 
                                               port=redis_port, 
                                               decode_responses=True)
-        self.status_key = status_key
+        self.telescope_status_key = telescope_status_key
+        self.pipeline_status_key = pipeline_status_key
+        self.control_channel = control_channel
         self.system_state = 'deconfigure'
-        self.telescope_state = 'unknown'
-        self.pipeline_state = self.redis_server.get('pipeline_status')
+        self.telescope_state = self.redis_server.get(telescope_status_key)
+        self.pipeline_state = self.redis_server.get(pipeline_status_key)
 
     def start(self):
         """Start the automator. Actions to be taken depend on the incoming 
@@ -96,8 +99,9 @@ class Automator(object):
         if(self.system_state == 'tracking'):
             result = Interface.stop_recording()
             if(result == 0):
-                self.system_state = 'configured'
-                log.info("Tracking stopped, system in state 'configured'")
+                self.system_state = 'recording_complete'
+                log.info("Recording stopped, proceeding to processing")
+                self._process()
         elif(self.system_state == 'deconfigured'):
             result = Interface.configure()
             if(result == 0):
@@ -131,8 +135,21 @@ class Automator(object):
             log.info('Telescope is tracking, but system state is {} and pipeline state is {}'.format(self.system_state, self.pipeline_state))      
             log.info('Not recording')
                 
+    def _pipeline_error(self):
+        """If something goes wrong with recording.
+        """
+        if(self.system_state == 'recording'):
+            self.system_state = 'configured'
+            log.error('Recording error; returning system to configured state')
 
-
+    def _pipeline_idle(self):
+        """If pipeline transitions into idle state (task was successful).
+        """
+        if(self.system_state == 'recording'):
+            self.system_state = 'recording_complete'
+            log.info('Recording completed, proceeding to processing')
+            self._process()
+        
 
         
     def _process(self):
