@@ -53,7 +53,7 @@ class Automator(object):
 
     """
 
-    def __init__(self, redis_endpoint, telescope_status_key, pipeline_status_key, control_channel):
+    def __init__(self, redis_endpoint, telescope_status_key, pipeline_status_key, control_key):
         """Initialise automator.
 
         Args:
@@ -72,33 +72,53 @@ class Automator(object):
                                               decode_responses=True)
         self.telescope_status_key = telescope_status_key
         self.pipeline_status_key = pipeline_status_key
-        self.control_channel = control_channel
+        self.control_key = control_key # Set this key to manually control operations
         self.system_state = 'deconfigure'
         self.telescope_state = self.redis_server.get(telescope_status_key)
         self.pipeline_state = self.redis_server.get(pipeline_status_key)
+        self.control = self.redis_server.get(control_key)
 
     def start(self):
         """Start the automator. Actions to be taken depend on the incoming 
         observational stage messages on the appropriate Redis channel. 
         """    
         ps = self.redis_server.pubsub(ignore_subscribe_messages=True)
-        ps.subscribe('__keyspace@0__:{}').format(self.status_key)
-        log.info('Listening to status key: {}'.format(self.status_key)) 
+        ps.subscribe('__keyspace@0__:{}').format(self.telescope_status_key)
+        ps.subscribe('__keyspace@0__:{}').format(self.pipeline_status_key)
+        ps.subscribe('__keyspace@0__:{}').format(self.control_key)
+        log.info('Listening to telescope status key: {}'.format(self.telescope_status_key)) 
+        log.info('Listening to pipeline status key: {}'.format(self.pipeline_status_key)) 
+        log.info('Listening to control key: {}'.format(self.control_key)) 
         for key_cmd in ps.listen():
             if(key_cmd['data'] == 'set'):
-                telescope_state = self.redis_server.get(self.status_key)     
-                self._update(telescope_state)
+                val = self.redis_server.get(status_key)    
+                if(status_key == self.telescope_status_key):
+                    log.info("New telescope state: {}".format(val)) 
+                    self.telescope_state = val
+                    self._update(key_val)
+                if(status_key == self.pipeline_status_key): 
+                    log.info("New pipeline state: {}".format(val)) 
+                    self.pipeline_state = val
+                    self._update(key_val)
+                if(status_key == self.control_key): 
+                    log.info("Control updated: {}".format(val)) 
+                    self.control = val
     
-    def _update(self, telescope_state):
+    def _update(self, new_state):
         """Determine what to do (if anything) in response to a change 
         in telescope state or pipeline state.
         """
-        self.telescope_state = telescope_state
-        log.info("New telescope state: {}".format(telescope_state)) 
-        states = {'configured':self._configure,
-                  'tracking':self._tracking,
-                  'deconfigured':self._deconfigure}       
-        return states.get(telescope_state, self._ignored_state)
+        if(self.control == 'pause'):
+            log.info('All operations currently paused')
+            log.info('Ignoring new state: {}'.format(new_state))
+        else:
+            log.info("New state: {}".format(new_state)) 
+            states = {'configured':self._configure,
+                      'tracking':self._tracking,
+                      'deconfigured':self._deconfigure,
+                      'pipeline-idle':self._pipeline_idle,
+                      'pipeline-error':self._pipeline_error}       
+        return states.get(new_state, self._ignored_state)
 
     def _configure(self):
         """The telescope is configured, but not tracking a source.
@@ -179,5 +199,4 @@ class Automator(object):
                 log.info('Postprocessing completed, returning to system state: configured')
         else:
             "Not postprocessing; telescope state: {}, system state {}".format(self.telescope_state, self.system_state)
-
 
