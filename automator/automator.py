@@ -8,14 +8,23 @@ class Automator(object):
     This process coordinates and automates commensal observing and SETI 
     search processing at a high level.
 
-    Two observational modes are supported: Stop-and-stare (where fixed 
+    Two observational modes are to be supported: Stop-and-stare (where fixed 
     coordinates in RA and Dec are observed) and VLASS-style observing 
     (scanning across the sky).
 
+    This version is for stop-and-stare observing. 
 
+    Based on the following knowledge:
+
+    - The current state of the telescope
+    - The current state of the COSMIC recording/processing system
+    - The observing (processing and recording) behaviour desired by operators
+
+    the automator is to determine what instructions (if any) to deliver to the 
+    processing nodes. 
     """
 
-    def __init__(self, redis_endpoint, redis_chan):
+    def __init__(self, redis_endpoint, status_key):
         """Initialise automator.
 
         Args:
@@ -32,29 +41,32 @@ class Automator(object):
         self.redis_server = redis.StrictRedis(host=redis_host, 
                                               port=redis_port, 
                                               decode_responses=True)
-        self.redis_chan = redis_chan
-        self.state = 'idle'
+        self.status_key = status_key
+        self.system_state = 'idle'
+        self.telescope_state = 'Unknown'
 
     def start(self):
         """Start the automator. Actions to be taken depend on the incoming 
         observational stage messages on the appropriate Redis channel. 
-        """             
+        """    
         ps = self.redis_server.pubsub(ignore_subscribe_messages=True)
-        ps.subscribe(self.redis_chan)
-        log.info('Listening on: {}\n'.format(redis_chan)) 
-        for msg in ps.listen():
-            self.parse_xml_meta(msg)
-
-    def _parse_xml_meta(self, meta):
-        """Parses the incoming metadata and does the following:
-
-        1. Determines telescope observing state
-        2. Changes the automator state in response
-        3. Retrieves and transmits any metadata if necessary
-         
-        Args:
-            meta (dict): standard COSMIC metadata dictionary
+        ps.subscribe('__keyspace@0__:{}').format(self.status_key)
+        log.info('Listening to status key: {}'.format(self.status_key)) 
+        for key_cmd in ps.listen():
+            if(key_cmd['data'] == 'set'):
+                telescope_status = self.redis_server.get(self.status_key)     
+                self._update(telescope_status)
+    
+    def _update(self, telescope_status):
+        """Determine what to do (if anything) when the telescope state 
+        changes.
         """
+        log.info("New telescope state: {}".format(telescope_status)) 
+        states = {'configure':self._configure,
+                  'tracking':self._tracking,
+                  'idle':self._idle,
+                  'deconfigure':self._deconfigure}       
+        return states.get(state, self._ignored_state)
 
     def _idle(self):
         """Idle state: Neither the telescope itself nor COSMIC are doing
