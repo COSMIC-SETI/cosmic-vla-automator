@@ -22,6 +22,21 @@ class Automator(object):
 
     the automator is to determine what instructions (if any) to deliver to the 
     processing nodes. 
+
+    System states (stop and stare):
+
+    - deconfigured
+    - configured
+    - recording
+    - processing
+    - postprocessing
+
+    Telescope states (stop and stare):
+
+    - deconfigured
+    - configured
+    - tracking
+
     """
 
     def __init__(self, redis_endpoint, status_key):
@@ -42,8 +57,8 @@ class Automator(object):
                                               port=redis_port, 
                                               decode_responses=True)
         self.status_key = status_key
-        self.system_state = 'idle'
-        self.telescope_state = 'Unknown'
+        self.system_state = 'deconfigure'
+        self.telescope_state = 'unknown'
 
     def start(self):
         """Start the automator. Actions to be taken depend on the incoming 
@@ -58,22 +73,29 @@ class Automator(object):
                 self._update(telescope_status)
     
     def _update(self, telescope_status):
-        """Determine what to do (if anything) when the telescope state 
-        changes.
+        """Determine what to do (if anything) in response to a change 
+        in telescope state.
         """
         log.info("New telescope state: {}".format(telescope_status)) 
-        states = {'configure':self._configure,
+        states = {'configured':self._configure,
                   'tracking':self._tracking,
-                  'idle':self._idle,
-                  'deconfigure':self._deconfigure}       
-        return states.get(state, self._ignored_state)
+                  'deconfigured':self._deconfigure}       
+        return states.get(telescope_status, self._ignored_state)
 
-    def _idle(self):
-        """Idle state: Neither the telescope itself nor COSMIC are doing
-        anything. 
+    def _configure(self):
+        """The telescope is configured, but not tracking a source.
         """       
-        log.info("The automator is now IDLE")
-        # Will publish a message to slack here
+        self.telescope_state = 'configured'
+        if(self.system_state == 'tracking'):
+            result = Interface.stop_recording()
+            if(result == 0):
+                self.system_state = 'configured'
+        elif(self.system_state == 'deconfigured'):
+            result = Interface.configure()
+            if(result == 0):
+                self.system_state = 'configured'
+        else:
+            log.info("System in state {}; ignoring telescope state {}".format(self.system_state, self.telescope_state))
 
     def _configure(self):
         """The automator will request that the COSMIC backend systems prepare
