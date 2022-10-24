@@ -68,7 +68,7 @@ class Interface(object):
         if len(antennas) > 0:
             # Retrieve on source antennas:
             on_source = self.on_source_antennas()
-            if len(antennas) >= (len(on_source) - stragglers):
+            if len(on_source) >= (len(antennas) - stragglers):
                 return 'on_source'
             else:
                 return 'off_source'
@@ -83,7 +83,8 @@ def cli(args = sys.argv[0]):
     interface = Interface()
 
     if len(sys.argv) < 2:
-        print("Select a command:\ntelescope_state")
+        print("\nSelect a command from the following:\n")
+        print("telescope_state    current state of the telescope")
         return
     
     command = sys.argv[1]
@@ -91,6 +92,10 @@ def cli(args = sys.argv[0]):
 
     if command == 'telescope_state':
         print(interface.telescope_state())
+        return
+
+    else:
+        print("Command not recognised.")
         return 
 
 if __name__ == "__main__":
