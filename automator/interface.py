@@ -1,64 +1,78 @@
 import redis
+import json
 
 class Interface(object):
-    """Observing interface library.
-    
+    """Observing interface class. Provides functions to execute
+    some basic observing actions. 
+
+    For now, stop-and-stare observing is supported. In future,
+    additions will be made to support VLASS-style observing. 
+
     Offers the following:
+        - Retrieval of telescope state
         - Initiate configuration
-        - Request new target lists
         - Initiate recording
         - Initiate processing
-        - Run any cleanup functions
+        - Initiate post-processing/cleanup functions. 
     """
 
-    def configure(self, antennas, fcents, fenpol, obsbwmhz, samplehz):
-        """
-        return 0 if successful; return error code if not. 
-        """
+    def __init__(self):
+        self.r = redis.StrictRedis(decode_responses=True)
 
-    def record(self, src, ra_deg, dec_deg):
+    def expected_antennas(self, meta_hash='META', antenna_key='station'):
+        """Retrieve the list of antennas that are expected to be used 
+        for the current observation.
         """
-        return 0 if successful; return error code if not. 
-        Needs to return directory for recording (NVMe file path). 
-        """
+        # Stringified list of antennas:
+        antenna_str = self.r.hget(meta_hash, antenna_key)
+        # Convert to list:
+        if antenna_str is not None:
+            antenna_list = json.loads(antenna_str)
+        else:
+            antenna_list = []
+        return antenna_list 
     
-    def process(self):
+    def on_source_antennas(self, ant_hash='META_flagant', on_key='on_source'):
+        """Retrieve the list of on-source antennas.
         """
-        return 0 if successful; return error code if not. 
-        Needs to return directory for data products.
-        """
-    
-    def cleanup(self):
-        """
-        return 0 if successful; return error code if not. 
-        """
+        on_source_str = self.r.hget(antenna_hash, on_key)
+        if on_source_str is not None:
+            on_source = json.loads(on_source_str)
+        else:
+            on_source = []
+        return on_source
+
+    def telescope_state(self, stragglers=0, antenna_hash='META_flagant', 
+        on_key='on_source'):
+        """Retrieve the current state of the telescope. This must be 
+        achieved by looking at which antennas are actually observing
+        as expected. 
+
+        States include:
+            unconfigured: no antennas assigned to an observation
+            on_source: on source antennas >= off source antennas - stragglers
+            off_source: on source antennas < off source antennas - stragglers
+
+        Args:
+            stragglers (int): number of off-source stragglers permitted
+            when considering the telescope to be on source.  
+            antenna_hash (str): hash containing antenna status lists.
+            on_key (str): key for the list of on-source antennas. 
+
+        Returns: 
+            state (str): telescope state. 
+        """ 
+        # Max list of antennas expected 
+        antennas = self.expected_antennas()
+        if len(antennas) > 0:
+            # Retrieve on source antennas:
+            on_source = self.on_source_antennas()
+            if len(antennas) >= (len(on_source) - stragglers):
+                return 'on_source'
+            else:
+                return 'off_source'
+        else:
+            return 'unconfigured'
 
 
-    def request_targets(self, new_targets_chan, obs_ts, src, ra_deg, dec_deg, fcents):
-        """Request new targets from the target selector. Publishes a special 
-        formatted Redis message containing appropriate metadata to the new 
-        targets channel of the target selector.
 
-        Args: 
-        
-            new_targets_chan (str): Redis channel from which the target
-            selector expects new target list requests.
-            meta (dict): Metadata dictionary for the current observation. 
-        
-        """
-        telescope_name = 12  
-        subarray_name = 'array_1'
-        # Use max frequency for conservative field of view estimate
-        fecenter = max(fcents)
-
-        msg = '{}:{}:{}:{}:{}:{}:{}'.format(telescope_name,
-                                            subarray_name,
-                                            obs_ts,
-                                            src,
-                                            ra_deg,
-                                            dec_deg,
-                                            fecenter)
-
-        self.redis_obj.publish(new_targets_chan, msg)
-
-        logging.info('Requested new targets for {} at {}'.format(src_name, obs_ts))
