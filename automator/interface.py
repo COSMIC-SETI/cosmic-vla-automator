@@ -1,5 +1,6 @@
 import redis
 import json
+import sys
 
 class Interface(object):
     """Observing interface class. Provides functions to execute
@@ -35,7 +36,7 @@ class Interface(object):
     def on_source_antennas(self, ant_hash='META_flagant', on_key='on_source'):
         """Retrieve the list of on-source antennas.
         """
-        on_source_str = self.r.hget(antenna_hash, on_key)
+        on_source_str = self.r.hget(ant_hash, on_key)
         if on_source_str is not None:
             on_source = json.loads(on_source_str)
         else:
@@ -74,5 +75,25 @@ class Interface(object):
         else:
             return 'unconfigured'
 
+
+def cli(args = sys.argv[0]):
+    """CLI for manual command usage.
+    """
+
+    interface = Interface()
+
+    if len(sys.argv) < 2:
+        print("Select a command:\ntelescope_state")
+        return
+    
+    command = sys.argv[1]
+    args = sys.argv[2:]
+
+    if command == 'telescope_state':
+        print(interface.telescope_state())
+        return 
+
+if __name__ == "__main__":
+    cli()
 
 
