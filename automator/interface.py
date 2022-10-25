@@ -2,6 +2,9 @@ import redis
 import json
 import sys
 
+from logger import log
+import utils
+
 class Interface(object):
     """Observing interface class. Provides functions to execute
     some basic observing actions. 
@@ -20,28 +23,30 @@ class Interface(object):
     def __init__(self):
         self.r = redis.StrictRedis(decode_responses=True)
 
+    def fengine_state(self):
+        """Determines the current state of the F-engines.
+        """
+
+
     def expected_antennas(self, meta_hash='META', antenna_key='station'):
         """Retrieve the list of antennas that are expected to be used 
         for the current observation.
         """
-        # Stringified list of antennas:
-        antenna_str = self.r.hget(meta_hash, antenna_key)
+        antennas = utils.hget_decoded(self.r, meta_hash, antenna_key)
         # Convert to list:
-        if antenna_str is not None:
-            antenna_list = json.loads(antenna_str)
+        if antennas is not None:
+            return antennas
         else:
-            antenna_list = []
-        return antenna_list 
+            return []
     
     def on_source_antennas(self, ant_hash='META_flagant', on_key='on_source'):
         """Retrieve the list of on-source antennas.
         """
-        on_source_str = self.r.hget(ant_hash, on_key)
-        if on_source_str is not None:
-            on_source = json.loads(on_source_str)
+        on_source = utils.hget_decoded(self.r, ant_hash, on_key)
+        if on_source is not None:
+            return on_source
         else:
-            on_source = []
-        return on_source
+            return []
 
     def telescope_state(self, stragglers=0, antenna_hash='META_flagant', 
         on_key='on_source'):
