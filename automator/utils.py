@@ -16,3 +16,13 @@ def hget_decoded(r, r_hash, r_key):
         val = json.loads(val)
     return val
 
+def hashpipe_key_status(r, domain, host, instance, key, group=None):
+    """Retrieve the value of a hashpipe-redis gateway status key.
+    """
+    if group == None:
+        status_hash = '{}://{}/{}/status'.format(domain, host, instance)
+    else:
+        status_hash = '{}:{}//{}/{}/status'.format(domain, group, host, instance)
+    log.info(status_hash)
+    value = hget_decoded(r, status_hash, key)
+    return value
