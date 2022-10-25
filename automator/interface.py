@@ -18,6 +18,9 @@ class Interface(object):
 
     Offers the following:
         - Retrieval of telescope state
+        - Retrieval of F-engine state
+        - Retrieval of DAQ states
+        - Retrieval of DAQ recording states
         - Initiate configuration
         - Initiate recording
         - Initiate processing
