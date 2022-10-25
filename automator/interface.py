@@ -49,24 +49,47 @@ class Interface(object):
         else:
             return 'disabled'
 
-    def daq_state(self):
+    def daq_states(self, domain, instances):
         """Determine the state of the acquisition pipelines.
         """
+        states = {}
+        for instance in instances:
+            if self.daq_receive_state(domain, instance) > 0:
+                states[instance] = 'receive_error'
+            else:
+                states[instance] = self.daq_record_state(domain, instance)
+        return states
 
-    def daq_receive_state(self, domain, host, instance):
+    def daq_record_state(self, domain, instance):
+        """Determine recording state of a specific DAQ instance.
+        """
+        state = 'unknown'
+        pktidx = utils.hashpipe_key_status(self.r, domain, instance, 'PKTIDX')
+        pktstart = utils.hashpipe_key_status(self.r, domain, instance, 'PKTSTART')
+        pktstop = utils.hashpipe_key_status(self.r, domain, instance, 'PKTSTOP')
+        if pktidx < pktstart:
+            # we are set to record when pktidx == pktstart
+            state = 'armed'
+        elif pktidx >= pktstart:
+            if pktidx < pktstop:
+                # we are recording
+                state = 'recording'
+            else:
+                # we have completed recording
+                state = 'idle' 
+        return state
+
+    def daq_receive_state(self, domain, instance):
         """Check that received datarate is close to the expected
         datarate.
         """
-        expected_gbps = utils.hashpipe_key_status(self.r, domain, host, instance, 'XPCTGBPS')
-        actual_gbps = utils.hashpipe_key_status(self.r, domain, host, instance, 'IBVGBPS')
+        expected_gbps = utils.hashpipe_key_status(self.r, domain, instance, 'XPCTGBPS')
+        actual_gbps = utils.hashpipe_key_status(self.r, domain, instance, 'IBVGBPS')
         # Needs to be within 0.1% according to Ross
         if abs(expected_gbps - actual_gbps)/expected_gbps < 0.001:
             return 0
         else:
             return 1
-
-    
-
 
     def expected_antennas(self, meta_hash='META', antenna_key='station'):
         """Retrieve the list of antennas that are expected to be used 
@@ -136,10 +159,15 @@ def cli(args = sys.argv[0]):
         print("\n    telescope_state      Current state of the telescope")
         print("\n    fengine_state        Aggregate F-engine state")
         print("\n    expected_antennas    List of antennas which should be active")
-        print("\n    daq_receive_state    Status of daq receiving. Requires args:")
-        print("                         domain:   hashpipe domain")
-        print("                         host:     host name for hashpipe instance")
-        print("                         instance: hashpipe instance number\n")
+        print("\n    daq_states           DAQ statuses. Requires args:")
+        print("                             domain:   hashpipe domain")
+        print("                             instances: hashpipe instances")
+        print("\n    daq_receive_state    Status of DAQ receiving. Requires args:")
+        print("                             domain:   hashpipe domain")
+        print("                             instance: hashpipe instance")
+        print("\n    daq_record_state     Status of DAQ recording. Requires args:")
+        print("                             domain:   hashpipe domain")
+        print("                             instance: hashpipe instance\n")
         return
     
     command = sys.argv[1]
@@ -154,11 +182,20 @@ def cli(args = sys.argv[0]):
     if command == 'expected_antennas':
         print(interface.expected_antennas())
         return
+    if command == 'daq_states':
+        domain = args[0]
+        instance = args[1:]
+        print(interface.daq_states(domain, instance))
+        return
     if command == 'daq_receive_state':
         domain = args[0]
-        host = args[1]
-        instance = args[2]
-        print(interface.daq_receive_state(domain, host, instance))
+        instance = args[1]
+        print(interface.daq_receive_state(domain, instance))
+        return
+    if command == 'daq_record_state':
+        domain = args[0]
+        instances = args[1]
+        print(interface.daq_record_state(domain, instances))
         return
 
     else:
