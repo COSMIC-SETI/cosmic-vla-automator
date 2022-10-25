@@ -1,6 +1,7 @@
 import redis
 import json
 import sys
+import logging
 
 from logger import log
 import utils
@@ -30,7 +31,6 @@ class Interface(object):
         """Determines the (aggregate) current state of the F-engines.
         """
         # Retrieve F-engine to antenna mapping:
-
         feng_antenna_map = ant_remotefeng_map.get_antennaFengineDict(self.r)
         # Check F-engine states:
         n_fengines = 0
@@ -48,6 +48,25 @@ class Interface(object):
             return 'enabled'
         else:
             return 'disabled'
+
+    def daq_state(self):
+        """Determine the state of the acquisition pipelines.
+        """
+
+    def daq_receive_state(self, domain, host, instance):
+        """Check that received datarate is close to the expected
+        datarate.
+        """
+        expected_gbps = utils.hashpipe_key_status(self.r, domain, host, instance, 'XPCTGBPS')
+        actual_gbps = utils.hashpipe_key_status(self.r, domain, host, instance, 'IBVGBPS')
+        # Needs to be within 0.1% according to Ross
+        if abs(expected_gbps - actual_gbps)/expected_gbps < 0.001:
+            return 0
+        else:
+            return 1
+
+    
+
 
     def expected_antennas(self, meta_hash='META', antenna_key='station'):
         """Retrieve the list of antennas that are expected to be used 
@@ -106,13 +125,21 @@ def cli(args = sys.argv[0]):
     """CLI for manual command usage.
     """
 
+    # Temporarily elevate logging level to only show errors:
+    logger = logging.getLogger()
+    logger.setLevel(logging.ERROR)
+
     interface = Interface()
 
     if len(sys.argv) < 2:
         print("\nSelect a command from the following:")
-        print("\n    telescope_state      current state of the telescope")
-        print("\n    fengine_state        aggregate F-engine state")
-        print("\n    expected_antennas    list of antennas which should be active")
+        print("\n    telescope_state      Current state of the telescope")
+        print("\n    fengine_state        Aggregate F-engine state")
+        print("\n    expected_antennas    List of antennas which should be active")
+        print("\n    daq_receive_state    Status of daq receiving. Requires args:")
+        print("                         domain:   hashpipe domain")
+        print("                         host:     host name for hashpipe instance")
+        print("                         instance: hashpipe instance number\n")
         return
     
     command = sys.argv[1]
@@ -126,6 +153,12 @@ def cli(args = sys.argv[0]):
         return
     if command == 'expected_antennas':
         print(interface.expected_antennas())
+        return
+    if command == 'daq_receive_state':
+        domain = args[0]
+        host = args[1]
+        instance = args[2]
+        print(interface.daq_receive_state(domain, host, instance))
         return
 
     else:
