@@ -8,7 +8,6 @@ import utils
 
 from cosmic.fengines import ant_remotefeng_map
 
-
 class Interface(object):
     """Observing interface class. Provides functions to execute
     some basic observing actions. 
@@ -21,6 +20,7 @@ class Interface(object):
         - Retrieval of F-engine state
         - Retrieval of DAQ states
         - Retrieval of DAQ recording states
+        - Retrieval of DATADIR by instance
         - Initiate configuration
         - Initiate recording
         - Initiate processing
@@ -51,6 +51,14 @@ class Interface(object):
             return 'enabled'
         else:
             return 'disabled'
+
+    def datadirs(self, domain, instances):
+        """Determine current DATADIR for all DAQ instances. 
+        """
+        dirs = {}
+        for instance in instances:
+            dirs[instance] = utils.hashpipe_key_status(self.r, domain, instance, 'DATADIR')
+        return dirs
 
     def daq_states(self, domain, instances):
         """Determine the state of the acquisition pipelines.
@@ -170,7 +178,10 @@ def cli(args = sys.argv[0]):
         print("                             instance: hashpipe instance")
         print("\n    daq_record_state     Status of DAQ recording. Requires args:")
         print("                             domain:   hashpipe domain")
-        print("                             instance: hashpipe instance\n")
+        print("                             instance: hashpipe instance")
+        print("\n    datadirs             Location of recorded output data. Requires args:")
+        print("                             domain:   hashpipe domain")
+        print("                             instances: hashpipe instances\n")
         return
     
     command = sys.argv[1]
@@ -200,7 +211,11 @@ def cli(args = sys.argv[0]):
         instances = args[1]
         print(interface.daq_record_state(domain, instances))
         return
-
+    if command == 'datadirs':
+        domain = args[0]
+        instances = args[1:]
+        print(interface.datadirs(domain, instances))
+        return
     else:
         print("Command not recognised.")
         return 
