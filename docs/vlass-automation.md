@@ -26,7 +26,7 @@ RA<sub>2</sub> are two primary beamwidths apart.
 ### 2.
 
 The automator instructs the processing nodes to record from t<sub>1</sub> to 
-t<sub>2</sub>. It also instructs the phase center to be at C<sub>1</sub> as
+t<sub>2</sub>. It also instructs the phase center to be at C as
 follows:
 
 ![Fig. 2](diagrams/vlass_2b.svg)
@@ -36,7 +36,7 @@ follows:
 We know that VLASS scans overlap in RA, so we can constrain target sources to 
 lie in a strip narrower than the primary field of view of the telescope. The 
 targets to be observed are given in red. By limiting them within the 
-primary field of view centered on C<sub>1</sub>, we ensure that each source is 
+primary field of view centered on C, we ensure that each source is 
 recorded for a full transit of the primary field of view. 
 
 ![Fig. 3](diagrams/vlass_3b.svg)
