@@ -1,6 +1,6 @@
 # Commensal observing with VLASS
 
-This document is to describe what the automator will do during VLASS-style 
+Here I aim to begin planning what the automator will do during VLASS-style 
 observing.
 
 During VLASS observations:
@@ -9,9 +9,9 @@ During VLASS observations:
 - A source is typically present for at most 5 seconds as the primary field of 
 view passes over it
 
-## Approach 1: Easy Mode
+## Approach 1 (easier)
 
-For expedient development (time is short!), I propose an easier 'burst-mode' 
+For expedient development (time is short!), I propose an easier, discrete 
 approach to start with.  
 
 ### 1.
@@ -58,7 +58,7 @@ when a source leaves the field of view or ignoring the data during this time.
 
 ### 5.
 
-In 'easy mode', the automator deals with discrete recordings, each covering a 
+In this 'easy mode', the automator deals with discrete recordings, each covering a 
 transit equivalent to two beamwidths. Each of these discrete recordings is 
 handled completely separately with a separate beamformer recipe file. After 
 recording, processing (upchannelisation, beamforming, SETI search and cleanup)
@@ -67,7 +67,7 @@ processing takes.
 
 ![Fig. 4](diagrams/vlass_5b.svg)
 
-## Approach 2: Hard Mode
+## Approach 2 (harder)
 
 Here, we are able to shrink processing enough such that we can have the field
 of view around each phase center overlap. This way, none of the sky is missed. 
