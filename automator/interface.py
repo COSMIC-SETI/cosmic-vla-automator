@@ -176,6 +176,15 @@ class Interface(object):
         else:
             return 'unconfigured'
 
+    def src_name(self):
+        """Get current source name.
+        """
+        src_name = utils.hget_decoded(self.r, 'META', 'src')
+        if src_name is None:
+            return 'unknown'
+        else:
+            return src_name
+
 def cli(args = sys.argv[0]):
     """CLI for manual command usage.
     """
@@ -207,7 +216,8 @@ def cli(args = sys.argv[0]):
         print("                             instances: hashpipe instances")
         print("\n    daq_record_modes     Recording mode for DAQ instances. Requires args:")
         print("                             domain:    hashpipe domain")
-        print("                             instances: hashpipe instances\n")
+        print("                             instances: hashpipe instances")
+        print("\n    src_name             Current source name\n")
         return
     
     command = sys.argv[1]
@@ -250,6 +260,9 @@ def cli(args = sys.argv[0]):
         domain = args[0]
         instances = args[1:]
         print(interface.datadirs(domain, instances))
+        return
+    if command == 'src_name':
+        print(interface.src_name())
         return
     else:
         print("Command not recognised.")
