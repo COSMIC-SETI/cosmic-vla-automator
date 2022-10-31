@@ -7,6 +7,7 @@ from logger import log
 import utils
 
 from cosmic.fengines import ant_remotefeng_map
+from cosmic.observations.record import record
 
 class Interface(object):
     """Observing interface class. Provides functions to execute
@@ -29,6 +30,17 @@ class Interface(object):
 
     def __init__(self):
         self.r = redis.StrictRedis(decode_responses=True)
+
+    def record_fixed(self, duration):
+        """Instruct instances to record for a fixed RA/Dec
+        """
+        try:
+            log.info('Recording fixed RA, Dec for {} s'.format(duration))
+            record(self.r, duration)
+        except Exception as e:
+            log.info('Recording failed')
+            log.info(e)
+        return
 
     def daq_record_modes(self, domain, instances):
         """Determine the current selected recording mode for the specified
@@ -164,7 +176,6 @@ class Interface(object):
         else:
             return 'unconfigured'
 
-
 def cli(args = sys.argv[0]):
     """CLI for manual command usage.
     """
@@ -177,11 +188,13 @@ def cli(args = sys.argv[0]):
 
     if len(sys.argv) < 2:
         print("\nSelect a command from the following:")
+        print("\n    record_fixed         Record a fixed RA/Dec. Requires args:")
+        print("                             duration:  time to record in seconds")
         print("\n    telescope_state      Current state of the telescope")
         print("\n    fengine_state        Aggregate F-engine state")
         print("\n    expected_antennas    List of antennas which should be active")
         print("\n    daq_states           DAQ statuses. Requires args:")
-        print("                             domain:   hashpipe domain")
+        print("                             domain:    hashpipe domain")
         print("                             instances: hashpipe instances")
         print("\n    daq_receive_state    Status of DAQ receiving. Requires args:")
         print("                             domain:   hashpipe domain")
@@ -190,16 +203,20 @@ def cli(args = sys.argv[0]):
         print("                             domain:   hashpipe domain")
         print("                             instance: hashpipe instance")
         print("\n    datadirs             Location of recorded output data. Requires args:")
-        print("                             domain:   hashpipe domain")
-        print("                             instances: hashpipe instances\n")
+        print("                             domain:    hashpipe domain")
+        print("                             instances: hashpipe instances")
         print("\n    daq_record_modes     Recording mode for DAQ instances. Requires args:")
-        print("                             domain:   hashpipe domain")
+        print("                             domain:    hashpipe domain")
         print("                             instances: hashpipe instances\n")
         return
     
     command = sys.argv[1]
     args = sys.argv[2:]
 
+    if command == 'record_fixed':
+        duration = args[0]
+        interface.record_fixed(duration)
+        return
     if command == 'telescope_state':
         print(interface.telescope_state())
         return
