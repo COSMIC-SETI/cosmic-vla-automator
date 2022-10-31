@@ -70,7 +70,9 @@ processing takes.
 ## Approach 2 (harder)
 
 Here, we are able to shrink processing enough such that we can have the field
-of view around each phase center overlap. This way, none of the sky is missed. 
+of view around each phase center overlap. `(Is this possible to do? Can phase 
+centers be calculated for overlapping segments of data if this is done in real
+time on the FPGAs?)` This way, none of the sky is missed. 
 This means that overlapping sections of the recorded data are needed for each 
 phase center calculation. We can also confine targets to a simple rectangular 
 region around each phase center.
