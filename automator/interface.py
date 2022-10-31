@@ -30,6 +30,15 @@ class Interface(object):
     def __init__(self):
         self.r = redis.StrictRedis(decode_responses=True)
 
+    def daq_record_modes(self, domain, instances):
+        """Determine the current selected recording mode for the specified
+        instances. Recording mode key is HPCONFIG. 
+        """
+        modes = {}
+        for instance in instances:
+            modes[instance] = utils.hashpipe_key_status(self.r, domain, instance, 'HPCONFIG')
+        return modes
+
     def fengine_state(self, stragglers=0):
         """Determines the (aggregate) current state of the F-engines.
         """
@@ -74,21 +83,22 @@ class Interface(object):
     def daq_record_state(self, domain, instance):
         """Determine recording state of a specific DAQ instance.
         """
-        state = 'unknown'
         pktidx = utils.hashpipe_key_status(self.r, domain, instance, 'PKTIDX')
         pktstart = utils.hashpipe_key_status(self.r, domain, instance, 'PKTSTART')
         pktstop = utils.hashpipe_key_status(self.r, domain, instance, 'PKTSTOP')
+        
+        # ToDo: handle None return values
+        # ToDo: pipelining Redis requests
+
         if pktidx < pktstart:
             # we are set to record when pktidx == pktstart
-            state = 'armed'
-        elif pktidx >= pktstart:
-            if pktidx < pktstop:
-                # we are recording
-                state = 'recording'
-            else:
-                # we have completed recording
-                state = 'idle' 
-        return state
+            return 'armed'
+        if pktidx < pktstop and pktstart != 0:
+            # we are recording
+            return 'recording'
+        else:
+            # we have completed recording
+            return 'idle' 
 
     def daq_receive_state(self, domain, instance):
         """Check that received datarate is close to the expected
@@ -182,6 +192,9 @@ def cli(args = sys.argv[0]):
         print("\n    datadirs             Location of recorded output data. Requires args:")
         print("                             domain:   hashpipe domain")
         print("                             instances: hashpipe instances\n")
+        print("\n    daq_record_modes     Recording mode for DAQ instances. Requires args:")
+        print("                             domain:   hashpipe domain")
+        print("                             instances: hashpipe instances\n")
         return
     
     command = sys.argv[1]
@@ -198,8 +211,8 @@ def cli(args = sys.argv[0]):
         return
     if command == 'daq_states':
         domain = args[0]
-        instance = args[1:]
-        print(interface.daq_states(domain, instance))
+        instances = args[1:]
+        print(interface.daq_states(domain, instances))
         return
     if command == 'daq_receive_state':
         domain = args[0]
@@ -208,8 +221,13 @@ def cli(args = sys.argv[0]):
         return
     if command == 'daq_record_state':
         domain = args[0]
-        instances = args[1]
-        print(interface.daq_record_state(domain, instances))
+        instance = args[1]
+        print(interface.daq_record_state(domain, instance))
+        return
+    if command == 'daq_record_modes':
+        domain = args[0]
+        instances = args[1:]
+        print(interface.daq_record_modes(domain, instances))
         return
     if command == 'datadirs':
         domain = args[0]
