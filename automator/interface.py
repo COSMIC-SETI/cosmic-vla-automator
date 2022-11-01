@@ -2,6 +2,7 @@ import redis
 import json
 import sys
 import logging
+import os
 
 from logger import log
 import utils
@@ -73,6 +74,25 @@ class Interface(object):
             return 'enabled'
         else:
             return 'disabled'
+
+    def outputdirs(self, domain, instances):
+        """Determine the full filepath for the output directories for each 
+        instance. 
+        Filepath is of the format:
+        DATADIR/PROJID/BACKEND
+        """
+        dirs = {}
+        for instance in instances:
+            datadir = utils.hashpipe_key_status(self.r, domain, instance, 'DATADIR')
+            projid = utils.hashpipe_key_status(self.r, domain, instance, 'PROJID')
+            backend = utils.hashpipe_key_status(self.r, domain, instance, 'BACKEND')
+            output_path = datadir
+            if(projid is not None):
+                output_path = os.path.join(output_path, projid)
+            if(backend is not None):
+                output_path = os.path.join(output_path, backend)
+            dirs[instance] = output_path
+        return dirs
 
     def datadirs(self, domain, instances):
         """Determine current DATADIR for all DAQ instances. 
@@ -212,7 +232,10 @@ def cli(args = sys.argv[0]):
         print("\n    daq_record_state     Status of DAQ recording. Requires args:")
         print("                             domain:   hashpipe domain")
         print("                             instance: hashpipe instance")
-        print("\n    datadirs             Location of recorded output data. Requires args:")
+        print("\n    datadirs             Retrieve DATADIR. Requires args:")
+        print("                             domain:    hashpipe domain")
+        print("                             instances: hashpipe instances")
+        print("\n    outputdirs           Location of recorded output data. Requires args:")
         print("                             domain:    hashpipe domain")
         print("                             instances: hashpipe instances")
         print("\n    daq_record_modes     Recording mode for DAQ instances. Requires args:")
@@ -265,6 +288,11 @@ def cli(args = sys.argv[0]):
         domain = args[0]
         instances = args[1:]
         print(interface.datadirs(domain, instances))
+        return
+    if command == 'outputdirs':
+        domain = args[0]
+        instances = args[1:]
+        print(interface.outputdirs(domain, instances))
         return
     if command == 'src_name':
         print(interface.src_name())
