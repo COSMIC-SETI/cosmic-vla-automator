@@ -6,17 +6,20 @@ At least two modes of operation are required: standard "stop and stare" observin
 
 Planning for VLASS observations is available here: [commensal observing with VLASS](docs/vlass-automation.md)
 
-### Interacting with the system manually via the command line:  
+### Interacting manually via the command line:  
   
 Many of the functions of the automator can be used manually via 
 the commandline with the interface module. To use, make sure you 
 are in the `cosmic_vla` virtual environment:
 
-```conda activate cosmic_vla
+```
+conda activate cosmic_vla
+```
 
 Then, the following commands are available:
 
-```python3 interface.py 
+```
+python3 interface.py 
 
 Select a command from the following:
 
