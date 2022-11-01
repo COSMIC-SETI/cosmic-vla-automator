@@ -224,7 +224,11 @@ def cli(args = sys.argv[0]):
     args = sys.argv[2:]
 
     if command == 'record_fixed':
-        duration = args[0]
+        try:
+            duration = int(args[0])
+        except:
+            print('Bad input (requires integer number of seconds)')
+            return
         interface.record_fixed(duration)
         return
     if command == 'telescope_state':
