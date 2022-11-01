@@ -31,12 +31,13 @@ class Interface(object):
     def __init__(self):
         self.r = redis.StrictRedis(decode_responses=True)
 
-    def record_fixed(self, duration):
+    def record_fixed(self, duration, project_id='discard'):
         """Instruct instances to record for a fixed RA/Dec
         """
         try:
             log.info('Recording fixed RA, Dec for {} s'.format(duration))
-            record(self.r, duration)
+            gateway_keyvals = {'PROJID':'{}'.format(project_id)}
+            record(self.r, duration, hashpipe_kv_dict=gateway_keyvals)
         except Exception as e:
             log.info('Recording failed')
             log.info(e)
