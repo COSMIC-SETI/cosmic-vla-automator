@@ -33,7 +33,7 @@ follows:
 
 ### 3. 
 
-We know that VLASS scans overlap in RA, so we can constrain target sources to 
+We know that VLASS scans overlap in DEC, so we can constrain target sources to 
 lie in a strip narrower than the primary field of view of the telescope. The 
 targets to be observed are given in red. By limiting them within the 
 primary field of view centered on C, we ensure that each source is 
