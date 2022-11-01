@@ -26,6 +26,8 @@ Select a command from the following:
     record_fixed         Record a fixed RA/Dec. Requires args:
                              duration:  time to record in seconds
 
+    stop_record          Stop current in-progress recording.
+
     telescope_state      Current state of the telescope
 
     fengine_state        Aggregate F-engine state

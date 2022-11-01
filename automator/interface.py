@@ -8,7 +8,7 @@ from logger import log
 import utils
 
 from cosmic.fengines import ant_remotefeng_map
-from cosmic.observations.record import record
+from cosmic.observations.record import record, hashpipe_recordStop
 
 class Interface(object):
     """Observing interface class. Provides functions to execute
@@ -43,6 +43,16 @@ class Interface(object):
             log.info('Recording failed')
             log.info(e)
         return
+
+    def stop_record(self):
+        """Stop in-progress recording. 
+        """
+        try:
+            log.info('Stopping recording...')
+            hashpipe_recordStop()
+        except Exception as e:
+            log.info('Could not stop current recording')
+            log.info(e)
 
     def daq_record_modes(self, domain, instances):
         """Determine the current selected recording mode for the specified
@@ -220,6 +230,7 @@ def cli(args = sys.argv[0]):
         print("\nSelect a command from the following:")
         print("\n    record_fixed         Record a fixed RA/Dec. Requires args:")
         print("                             duration:  time to record in seconds")
+        print("\n    stop_record          Stop current in-progress recording.")
         print("\n    telescope_state      Current state of the telescope")
         print("\n    fengine_state        Aggregate F-engine state")
         print("\n    expected_antennas    List of antennas which should be active")
@@ -247,6 +258,9 @@ def cli(args = sys.argv[0]):
     command = sys.argv[1]
     args = sys.argv[2:]
 
+    if command == 'stop_record':
+        interface.stop_record()
+        return
     if command == 'record_fixed':
         try:
             duration = int(args[0])
