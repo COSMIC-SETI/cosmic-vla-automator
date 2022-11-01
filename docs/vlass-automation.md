@@ -11,8 +11,8 @@ view passes over it
 
 ## Approach 1 (easier)
 
-For expedient development (time is short!), I propose an easier, discrete 
-approach to start with.  
+For expedient development, we could follow an easier, discrete 
+approach to begin with.  
 
 ### 1.
 
@@ -43,7 +43,7 @@ recorded for a full transit of the primary field of view.
 
 ### 4. 
 
-Not all the stars within the circle around C<sub>1</sub> will be visible for 
+Not all the stars within the circle around C will be visible for 
 the full width of the primary field of view. The horizontal red lines give an 
 indication of the portion of RA within which they are recorded as the primary 
 field of view passes.
@@ -67,12 +67,26 @@ processing takes.
 
 ![Fig. 4](diagrams/vlass_5b.svg)
 
+**Pros:**
+
+- No need to manage phase centers calculated from overlapping segments of data
+- Improvement in sky coverage can be made by speeding up processing and 
+bringing segments closer together
+
+**Cons:**
+
+- Even with the best case processing time, portions of sky will still be missed
+since phase centers must be calculated from separate segments of recorded data. 
+
 ## Approach 2 (harder)
 
 Here, we are able to shrink processing enough such that we can have the field
-of view around each phase center overlap. `(Is this possible to do? Can phase 
-centers be calculated for overlapping segments of data if this is done in real
-time on the FPGAs?)` This way, none of the sky is missed. 
+of view around each phase center overlap. 
+
+- **Is this possible to do? Can phase centers be calculated for overlapping
+segments of recorded data, given that delay compensation happens on the FPGAs?**
+
+This way, none of the sky is missed. 
 This means that overlapping sections of the recorded data are needed for each 
 phase center calculation. We can also confine targets to a simple rectangular 
 region around each phase center.
@@ -82,4 +96,9 @@ region around each phase center.
 The overlapping sections of the recorded data are shown below:
 
 ![Fig. 4](diagrams/vlass_7b.svg)
+
+For an approach like this, the automator would precalculate target lists, the 
+locations of phase centers, and beamformer recipe files in advance at the start 
+of a VLASS scan. Then, recording and processing would take place autonomously 
+and without intervention from the automator until the scan is completed. 
 
