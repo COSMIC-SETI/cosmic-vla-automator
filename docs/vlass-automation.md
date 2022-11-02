@@ -9,7 +9,7 @@ During VLASS observations:
 - A source is typically present for at most 5 seconds as the primary field of 
 view passes over it
 
-## Approach 1 (easier)
+## Phase 1
 
 For expedient development, we could follow an easier, discrete 
 approach to begin with.  
@@ -78,13 +78,15 @@ bringing segments closer together
 - Even with the best case processing time, portions of sky will still be missed
 since phase centers must be calculated from separate segments of recorded data. 
 
-## Approach 2 (harder)
+## Phase 2
 
 Here, we are able to shrink processing enough such that we can have the field
 of view around each phase center overlap. 
 
 - **Is this possible to do? Can phase centers be calculated for overlapping
 segments of recorded data, given that delay compensation happens on the FPGAs?**
+
+- **Do phase centers need to be recalculated for each field like this?**
 
 This way, none of the sky is missed. 
 This means that overlapping sections of the recorded data are needed for each 
