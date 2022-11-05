@@ -58,7 +58,8 @@ class Automator(object):
 
     """
 
-    def __init__(self, redis_endpoint, antenna_hash_key):
+    def __init__(self, redis_endpoint, antenna_key, instances, daq_domain, 
+                 duration):
         """Initialise automator.
 
         Args:
@@ -74,53 +75,45 @@ class Automator(object):
         self.r = redis.StrictRedis(host=redis_host, 
                                               port=redis_port, 
                                               decode_responses=True)
-        self.antenna_hash_key = antenna_hash_key
+        self.antenna_hash_key = antenna_key
+        self.instances = instances
+        self.daq_domain = daq_domain
+        self.duration = duration
 
     def start(self):
         """Start the automator. Actions to be taken depend on the incoming 
         observational stage messages on the appropriate Redis channel. 
         """   
-
-        # Wait for telescope to observe something. This is achieved by 
-        # checking (each time the META hash is updated, which happens when a new META
-        # xml packet is 
         
-        # Need slack notifications
-        # Need to support wait observations
-        # Need to install circus and logging 
-
-        # Subscribe and check for changes to station hash
-
-            # If there's a change, compare station list
-                # if on source, check:
-                # F-engines TX
-                # DAQ receive state
-                # DAQ record state
-
-                # wait conditions
-
-                # if unprocessed recordings, 
-                # if unpostprocessed recordings
-
-            # If yes, start recording
-                # Instruct recording
-                # Subscribe and monitor recording state
-            
-            # When complete:
-                # Placeholders for processing
+        utils.alert('Starting up...')
 
         # Check if we are already on source:
-        tel_state_on_startup = Interface.telescope_state(antenna_hash=self.antenna_hash_key)
-
+        tel_state_on_startup = Interface.telescope_state(
+            antenna_hash=self.antenna_hash_key)
         if tel_state_on_startup == 'on_source':
-            self.propose_recording()                 
+            # If we are on source, initiate recording for any available 
+            # processing nodes 
+            self.record_conditional(self.daq_domain, 
+                                    self.instances, 
+                                    self.duration)                 
         else:
             utils.alert('Telescope in state: {}'.format(tel_state_on_startup))
 
+        ps = self.r.pubsub(ignore_subscribe_messages=True)
         # Listen to antenna station key and compare allocated antennas with 
         # on-source antennas to determine recording readiness 
-        ps = self.r.pubsub(ignore_subscribe_messages=True)
         ps.subscribe('__keyspace@0__:{}').format(self.antenna_hash_key)
+        
         for key_cmd in ps.listen():
             if(key_cmd['data'] == 'set')
+
+            # If we transition to 'off source', check if we should stop recording
+
+            # If we transition to 'on source', check if we should start recording
+
+            # If we stop recording, check if we should start processing
+
+            # If we stop processing, check if we should start postprocessing
+
+            # If we stop postprocessing, check if we should start recording
 
