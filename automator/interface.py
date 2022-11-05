@@ -128,15 +128,28 @@ class Interface(object):
     def daq_states(self, domain, instances):
         """Determine the state of the acquisition pipelines.
         """
-        states = {}
+        rec_error = []
+        idle = []
+        armed = []
+        recording = []
         for instance in instances:
             if self.daq_receive_state(domain, instance) > 0:
-                states[instance] = 'receive_error'
+                rec_error.append(instance)
             else:
-                states[instance] = self.daq_record_state(domain, instance)
+                daq_state = self.daq_record_state(domain, instance)
+                if daq_state == 'idle':
+                    idle.append(instance)
+                if daq_state == 'armed':
+                    armed.append(instance)
+                if daq_state == 'recording':
+                    recording.append(instance)
+        states = {'rec_error':rec_error,
+                  'idle':idle,
+                  'armed':armed,
+                  'recording':recording}
         return states
     
-    
+
     def daq_receive_state(self, domain, instance):
         """Check that received datarate is close to the expected
         datarate.
