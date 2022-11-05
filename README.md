@@ -25,6 +25,7 @@ Select a command from the following:
 
     record_fixed         Record a fixed RA/Dec. Requires args:
                              duration:  time to record in seconds
+                             instances: list of instances
 
     stop_record          Stop current in-progress recording.
 

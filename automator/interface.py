@@ -10,6 +10,8 @@ import utils
 from cosmic.fengines import ant_remotefeng_map
 from cosmic.observations.record import record, hashpipe_recordStop
 
+from hashpipe_keyvalues.standard import HashpipeKeyValues
+
 class Interface(object):
     """Observing interface class. Provides functions to execute
     some basic observing actions. 
@@ -32,12 +34,22 @@ class Interface(object):
     def __init__(self):
         self.r = redis.StrictRedis(decode_responses=True)
 
-    def record_fixed(self, duration, project_id='discard'):
+    def record_fixed(self, duration, instances, project_id='discard'):
         """Instruct instances to record for a fixed RA/Dec
         """
         try:
             log.info('Recording fixed RA, Dec for {} s'.format(duration))
+            log.info('Instances: {}'.format(instances))
+            # Construct list of gateway interface objects (required by record()):
+            # First, separate into pairs, since HashpipeKeyValues requires it:
+            host_instances = [instance.split('/') for instance in instances]
+            hashpipe_gateway_interfaces = [
+                HashpipeKeyValues(host_instance[0], host_instance[1], self.r)
+                for host_instance in host_instances
+                ]
+            # Set specific gateway key-value pairs
             gateway_keyvals = {'PROJID':'{}'.format(project_id)}
+            # Record
             record(self.r, duration, hashpipe_kv_dict=gateway_keyvals)
         except Exception as e:
             log.info('Recording failed')
@@ -112,6 +124,7 @@ class Interface(object):
             dirs[instance] = utils.hashpipe_key_status(self.r, domain, instance, 'DATADIR')
         return dirs
 
+
     def daq_states(self, domain, instances):
         """Determine the state of the acquisition pipelines.
         """
@@ -122,6 +135,20 @@ class Interface(object):
             else:
                 states[instance] = self.daq_record_state(domain, instance)
         return states
+    
+    
+    def daq_receive_state(self, domain, instance):
+        """Check that received datarate is close to the expected
+        datarate.
+        """
+        expected_gbps = utils.hashpipe_key_status(self.r, domain, instance, 'XPCTGBPS')
+        actual_gbps = utils.hashpipe_key_status(self.r, domain, instance, 'IBVGBPS')
+        # Needs to be within 0.1% according to Ross
+        if abs(expected_gbps - actual_gbps)/expected_gbps < 0.001:
+            return 0
+        else:
+            return 1
+
 
     def daq_record_state(self, domain, instance):
         """Determine recording state of a specific DAQ instance.
@@ -143,17 +170,6 @@ class Interface(object):
             # we have completed recording
             return 'idle' 
 
-    def daq_receive_state(self, domain, instance):
-        """Check that received datarate is close to the expected
-        datarate.
-        """
-        expected_gbps = utils.hashpipe_key_status(self.r, domain, instance, 'XPCTGBPS')
-        actual_gbps = utils.hashpipe_key_status(self.r, domain, instance, 'IBVGBPS')
-        # Needs to be within 0.1% according to Ross
-        if abs(expected_gbps - actual_gbps)/expected_gbps < 0.001:
-            return 0
-        else:
-            return 1
 
     def expected_antennas(self, meta_hash='META', antenna_key='station'):
         """Retrieve the list of antennas that are expected to be used 
@@ -230,6 +246,7 @@ def cli(args = sys.argv[0]):
         print("\nSelect a command from the following:")
         print("\n    record_fixed         Record a fixed RA/Dec. Requires args:")
         print("                             duration:  time to record in seconds")
+        print("                             instances: list of instances")
         print("\n    stop_record          Stop current in-progress recording.")
         print("\n    telescope_state      Current state of the telescope")
         print("\n    fengine_state        Aggregate F-engine state")
@@ -262,12 +279,16 @@ def cli(args = sys.argv[0]):
         interface.stop_record()
         return
     if command == 'record_fixed':
+        if len(args) < 2:
+            print('Missing arguments')
+            return
         try:
             duration = int(args[0])
         except:
             print('Bad input (requires integer number of seconds)')
             return
-        interface.record_fixed(duration)
+        instances = args[1:]
+        interface.record_fixed(duration, instances)
         return
     if command == 'telescope_state':
         print(interface.telescope_state())
