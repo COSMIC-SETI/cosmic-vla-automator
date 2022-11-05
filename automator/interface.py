@@ -34,6 +34,32 @@ class Interface(object):
     def __init__(self):
         self.r = redis.StrictRedis(decode_responses=True)
 
+
+    def record_conditional(self, daq_domain, instances, duration, 
+                           project_id='discard'):
+        """Initiate recording if required conditions are met. 
+        """
+    
+        # Check if F-engines are transmitting packets:
+        if Interface.fengine_state() == 'disabled':
+            utils.alert('F-engines disabled, therefore not recording.')
+            return
+    
+        # Check DAQ states for each host
+        daq_states = self.daq_states(daq_domain, instances)
+
+        if len(daq_states['idle']) == 0:
+            utils.alert('No idle hosts, not initiating new recording.')
+            return
+
+        # Would check here if processing taking place for any instances in the
+        # idle list. 
+
+        self.record_fixed(duration, daq_states[idle], project_id) 
+        
+        return
+
+
     def record_fixed(self, duration, instances, project_id='discard'):
         """Instruct instances to record for a fixed RA/Dec
         """
@@ -260,6 +286,10 @@ def cli(args = sys.argv[0]):
         print("\n    record_fixed         Record a fixed RA/Dec. Requires args:")
         print("                             duration:  time to record in seconds")
         print("                             instances: list of instances")
+        print("\n    record_conditional   Record if conditions met. Requires args:")
+        print("                             domain:  DAQ hashpipe domain.")
+        print("                             instances: list of instances")
+        print("                             duration:  time to record in seconds")
         print("\n    stop_record          Stop current in-progress recording.")
         print("\n    telescope_state      Current state of the telescope")
         print("\n    fengine_state        Aggregate F-engine state")
