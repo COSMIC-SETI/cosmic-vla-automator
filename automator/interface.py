@@ -43,7 +43,7 @@ class Interface(object):
         # Check if F-engines are transmitting packets:
         if Interface.fengine_state() == 'disabled':
             utils.alert('F-engines disabled, therefore not recording.')
-            return
+            return 
     
         # Check DAQ states for each host
         daq_states = self.daq_states(daq_domain, instances)
@@ -54,6 +54,8 @@ class Interface(object):
 
         # Would check here if processing taking place for any instances in the
         # idle list. 
+
+        # Would check here for "wait" conditions
 
         self.record_fixed(duration, daq_states[idle], project_id) 
         
