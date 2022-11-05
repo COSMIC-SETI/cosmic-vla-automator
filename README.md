@@ -35,6 +35,8 @@ Select a command from the following:
 
     expected_antennas    List of antennas which should be active
 
+    excluded_antennas    List of antennas which should be excluded
+
     daq_states           DAQ statuses. Requires args:
                              domain:    hashpipe domain
                              instances: hashpipe instances

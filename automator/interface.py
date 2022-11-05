@@ -223,6 +223,7 @@ class Interface(object):
         else:
             return []
     
+
     def on_source_antennas(self, ant_hash='META_flagant', on_key='on_source'):
         """Retrieve the list of on-source antennas.
         """
@@ -231,6 +232,18 @@ class Interface(object):
             return on_source
         else:
             return []
+
+
+    def excluded_antennas(self, ant_hash='META_flagant', ex_key='excluded'):
+        """Retrieve the list of antennas to be excluded from the current 
+        observation.
+        """
+        excluded = utils.hget_decoded(self.r, ant_hash, ex_key)
+        if excluded is not None:
+            return excluded
+        else:
+            return []
+
 
     def telescope_state(self, stragglers=0, antenna_hash='META_flagant', 
         on_key='on_source'):
@@ -296,6 +309,7 @@ def cli(args = sys.argv[0]):
         print("\n    telescope_state      Current state of the telescope")
         print("\n    fengine_state        Aggregate F-engine state")
         print("\n    expected_antennas    List of antennas which should be active")
+        print("\n    excluded_antennas    List of antennas which should be excluded")
         print("\n    daq_states           DAQ statuses. Requires args:")
         print("                             domain:    hashpipe domain")
         print("                             instances: hashpipe instances")
@@ -343,6 +357,9 @@ def cli(args = sys.argv[0]):
         return
     if command == 'expected_antennas':
         print(interface.expected_antennas())
+        return
+    if command == 'excluded_antennas':
+        print(interface.excluded_antennas())
         return
     if command == 'daq_states':
         domain = args[0]
