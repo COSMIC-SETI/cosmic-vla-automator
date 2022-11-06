@@ -50,7 +50,7 @@ class Interface(object):
 
         if len(daq_states['idle']) == 0:
             utils.alert('No idle hosts, not initiating new recording.')
-            return
+            return []
 
         # Would check here if processing taking place for any instances in the
         # idle list. 
@@ -59,7 +59,8 @@ class Interface(object):
 
         self.record_fixed(duration, daq_states[idle], project_id) 
         
-        return
+        # Return the list of instances that have been instructed to record
+        return daq_states[idle]
 
 
     def record_fixed(self, duration, instances, project_id='discard'):
@@ -84,7 +85,8 @@ class Interface(object):
             log.info(e)
         return
 
-    def stop_record(self):
+
+    def stop_recording(self):
         """Stop in-progress recording. 
         """
         try:
