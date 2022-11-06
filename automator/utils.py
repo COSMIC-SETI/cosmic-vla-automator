@@ -1,6 +1,7 @@
 import json
 import redis
 import os
+from datetime import datetime
 
 from logger import log
 
@@ -43,9 +44,18 @@ class Utils(object):
             status_hash = '{}:{}//{}/status'.format(domain, group, instance)
         val = self.hget_decoded(r, status_hash, key)
         return val
-    
+
+    def timestamp(self):
+        """Report UTC timestamp for slack alerts in ISO format.
+        """
+        now = datetime.utcnow().isoformat(timespec='milliseconds')
+        ts = '[{}Z]'.format(now)
+        return ts
+
     def alert(self, message):
         """Alert via Slack and log message.
         """
-        self.slackproxy.post_message(message)
         log.info(message)
+        print(message)
+        slack_message = '{} automator: {}'.format(self.timestamp(), message)
+        self.slackproxy.post_message(slack_message)
