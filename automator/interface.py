@@ -5,7 +5,7 @@ import logging
 import os
 
 from logger import log
-import utils
+from utils import Utils
 
 from cosmic.fengines import ant_remotefeng_map
 from cosmic.observations.record import record, hashpipe_recordStop
@@ -33,6 +33,7 @@ class Interface(object):
 
     def __init__(self):
         self.r = redis.StrictRedis(decode_responses=True)
+        self.u = Utils()
 
 
     def record_conditional(self, daq_domain, instances, duration, 
@@ -42,14 +43,14 @@ class Interface(object):
     
         # Check if F-engines are transmitting packets:
         if Interface.fengine_state() == 'disabled':
-            utils.alert('F-engines disabled, therefore not recording.')
+            self.u.alert('F-engines disabled, therefore not recording.')
             return 
     
         # Check DAQ states for each host
         daq_states = self.daq_states(daq_domain, instances)
 
         if len(daq_states['idle']) == 0:
-            utils.alert('No idle hosts, not initiating new recording.')
+            self.u.alert('No idle hosts, not initiating new recording.')
             return []
 
         # Would check here if processing taking place for any instances in the
@@ -102,7 +103,7 @@ class Interface(object):
         """
         modes = {}
         for instance in instances:
-            modes[instance] = utils.hashpipe_key_status(self.r, domain, instance, 'HPCONFIG')
+            modes[instance] = self.u.hashpipe_key_status(self.r, domain, instance, 'HPCONFIG')
         return modes
 
     def fengine_state(self, stragglers=0):
@@ -135,9 +136,9 @@ class Interface(object):
         """
         dirs = {}
         for instance in instances:
-            datadir = utils.hashpipe_key_status(self.r, domain, instance, 'DATADIR')
-            projid = utils.hashpipe_key_status(self.r, domain, instance, 'PROJID')
-            backend = utils.hashpipe_key_status(self.r, domain, instance, 'BACKEND')
+            datadir = self.u.hashpipe_key_status(self.r, domain, instance, 'DATADIR')
+            projid = self.u.hashpipe_key_status(self.r, domain, instance, 'PROJID')
+            backend = self.u.hashpipe_key_status(self.r, domain, instance, 'BACKEND')
             output_path = datadir
             if(projid is not None):
                 output_path = os.path.join(output_path, projid)
@@ -151,7 +152,7 @@ class Interface(object):
         """
         dirs = {}
         for instance in instances:
-            dirs[instance] = utils.hashpipe_key_status(self.r, domain, instance, 'DATADIR')
+            dirs[instance] = self.u.hashpipe_key_status(self.r, domain, instance, 'DATADIR')
         return dirs
 
 
@@ -184,8 +185,8 @@ class Interface(object):
         """Check that received datarate is close to the expected
         datarate.
         """
-        expected_gbps = utils.hashpipe_key_status(self.r, domain, instance, 'XPCTGBPS')
-        actual_gbps = utils.hashpipe_key_status(self.r, domain, instance, 'IBVGBPS')
+        expected_gbps = self.u.hashpipe_key_status(self.r, domain, instance, 'XPCTGBPS')
+        actual_gbps = self.u.hashpipe_key_status(self.r, domain, instance, 'IBVGBPS')
         # Needs to be within 0.1% according to Ross
         if abs(expected_gbps - actual_gbps)/expected_gbps < 0.001:
             return 0
@@ -196,9 +197,9 @@ class Interface(object):
     def daq_record_state(self, domain, instance):
         """Determine recording state of a specific DAQ instance.
         """
-        pktidx = utils.hashpipe_key_status(self.r, domain, instance, 'PKTIDX')
-        pktstart = utils.hashpipe_key_status(self.r, domain, instance, 'PKTSTART')
-        pktstop = utils.hashpipe_key_status(self.r, domain, instance, 'PKTSTOP')
+        pktidx = self.u.hashpipe_key_status(self.r, domain, instance, 'PKTIDX')
+        pktstart = self.u.hashpipe_key_status(self.r, domain, instance, 'PKTSTART')
+        pktstop = self.u.hashpipe_key_status(self.r, domain, instance, 'PKTSTOP')
         
         # ToDo: handle None return values
         # ToDo: pipelining Redis requests
@@ -218,7 +219,7 @@ class Interface(object):
         """Retrieve the list of antennas that are expected to be used 
         for the current observation.
         """
-        antennas = utils.hget_decoded(self.r, meta_hash, antenna_key)
+        antennas = self.u.hget_decoded(self.r, meta_hash, antenna_key)
         # Convert to list:
         if antennas is not None:
             return antennas
@@ -229,7 +230,7 @@ class Interface(object):
     def on_source_antennas(self, ant_hash='META_flagant', on_key='on_source'):
         """Retrieve the list of on-source antennas.
         """
-        on_source = utils.hget_decoded(self.r, ant_hash, on_key)
+        on_source = self.u.hget_decoded(self.r, ant_hash, on_key)
         if on_source is not None:
             return on_source
         else:
@@ -240,7 +241,7 @@ class Interface(object):
         """Retrieve the list of antennas to be excluded from the current 
         observation.
         """
-        excluded = utils.hget_decoded(self.r, ant_hash, ex_key)
+        excluded = self.u.hget_decoded(self.r, ant_hash, ex_key)
         if excluded is not None:
             return excluded
         else:
@@ -282,7 +283,7 @@ class Interface(object):
     def src_name(self):
         """Get current source name.
         """
-        src_name = utils.hget_decoded(self.r, 'META', 'src')
+        src_name = self.u.hget_decoded(self.r, 'META', 'src')
         if src_name is None:
             return 'unknown'
         else:
