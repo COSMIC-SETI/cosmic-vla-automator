@@ -62,3 +62,12 @@ Select a command from the following:
                              instances: hashpipe instances
 
     src_name             Current source name
+```
+
+### Installation:  
+  
+Note: To work correctly, Redis keyspace notifications must be enabled for 
+Redis hashes. To do so, set the redis configuration as follows::
+```
+redis-cli config set notify-keyspace-events Kh
+```
