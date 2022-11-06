@@ -1,8 +1,8 @@
 import argparse
 import sys
 
-from .automator import Automator
-from .logger import log, set_logger
+from automator import Automator
+from logger import log, set_logger
 
 def cli(args = sys.argv[0]):
     """Command line interface for the automator. 
@@ -16,18 +16,36 @@ def cli(args = sys.argv[0]):
                         type = str,
                         default = '127.0.0.1:6379', 
                         help = 'Local Redis endpoint')
-    parser.add_argument('--redis_channel',
+    parser.add_argument('--antenna_key', 
                         type = str,
-                        default = 'alerts', 
-                        help = 'Name of the Redis channel to subscribe to')
+                        default = 'META_flagAnt', 
+                        help = 'Antenna flag key.')
+    parser.add_argument('--daq_domain', 
+                        type = str,
+                        default = 'hashpipe', 
+                        help = 'DAQ domain')
+    parser.add_argument('--duration', 
+                        type = str,
+                        default = '60', 
+                        help = 'Recording duration, in seconds')
+    parser.add_argument('--instances',
+                        nargs='*',
+                        action='store',
+                        default = None,
+                        help = 'Available instances')
     if(len(sys.argv[1:]) == 0):
         parser.print_help()
         parser.exit()
     args = parser.parse_args()
     main(redis_endpoint = args.redis_endpoint, 
-         redis_channel = args.redis_channel)
+         antenna_key = args.antenna_key,
+         daq_domain = args.daq_domain,
+         duration = args.duration,
+         instances = args.instances
+         )
+
     
-def main(redis_endpoint, redis_channel):
+def main(redis_endpoint, antenna_key, daq_domain, duration, instances):
     """Starts the automator process.
     
     Args:
@@ -39,7 +57,11 @@ def main(redis_endpoint, redis_channel):
         None    
     """
     set_logger('DEBUG')
-    Automation = Automator(redis_endpoint, redis_channel)
+    Automation = Automator(redis_endpoint, 
+                           antenna_key, 
+                           instances, 
+                           daq_domain, 
+                           duration)
     Automation.start()
 
 if(__name__ == '__main__'):
