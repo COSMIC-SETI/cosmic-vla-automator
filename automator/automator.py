@@ -11,8 +11,6 @@ class Automator(object):
     coordinates in RA and Dec are observed) and VLASS-style observing 
     (scanning across the sky).
 
-    This version is for stop-and-stare observing. 
-
     Based on the following knowledge:
 
     - The current state of the telescope
@@ -21,37 +19,6 @@ class Automator(object):
 
     the automator is to determine what instructions (if any) to deliver to the 
     processing nodes. 
-
-    Automator system states (stop and stare):
-
-    - deconfigured (F-engines not transmitting)
-    - ready (ready to record)
-    - recording  
-    - recording_complete (a recording is completed but not processed)
-    - processing
-    - processing_complete (processing is complete, but postprocessing steps 
-      have not taken place)
-    - postprocessing
-
-    These are all states at which point a human operator may wish to pause 
-    operations. 
-
-    Telescope states (what the telescope is actually doing):
-
-    - deconfigured
-    - configured (set of antennas selected for current observation)
-    - tracking (antennas are tracking the source)
-
-    F-engine states:
-
-    - enabled (packets are being sent)
-    - disabled (packets are not being sent)
-
-    Pipeline states (what the pipeline is actually doing):
-
-    - pipeline-idle (not recording)
-    - pipeline-busy (recording)
-    - pipeline-error 
 
     TODO: implement retries for certain operations
     TODO: implement slack notifications for operational stages
