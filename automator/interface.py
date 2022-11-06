@@ -42,7 +42,7 @@ class Interface(object):
         """
     
         # Check if F-engines are transmitting packets:
-        if Interface.fengine_state() == 'disabled':
+        if self.fengine_state() == 'disabled':
             self.u.alert('F-engines disabled, therefore not recording.')
             return 
     
@@ -57,9 +57,9 @@ class Interface(object):
         # idle list. 
 
         # Would check here for "wait" conditions
-
-        self.record_fixed(duration, daq_states[idle], project_id) 
-        
+        self.u.alert("Would record now")
+        # self.record_fixed(duration, daq_states[idle], project_id) 
+        self.u.alerts("Instructed {} to record".format(daq_states[idle]))
         # Return the list of instances that have been instructed to record
         return daq_states[idle]
 
@@ -304,10 +304,6 @@ def cli(args = sys.argv[0]):
         print("\n    record_fixed         Record a fixed RA/Dec. Requires args:")
         print("                             duration:  time to record in seconds")
         print("                             instances: list of instances")
-        print("\n    record_conditional   Record if conditions met. Requires args:")
-        print("                             domain:  DAQ hashpipe domain.")
-        print("                             instances: list of instances")
-        print("                             duration:  time to record in seconds")
         print("\n    stop_record          Stop current in-progress recording.")
         print("\n    telescope_state      Current state of the telescope")
         print("\n    fengine_state        Aggregate F-engine state")
