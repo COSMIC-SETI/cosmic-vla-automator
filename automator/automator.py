@@ -87,31 +87,50 @@ class Automator(object):
         
         utils.alert('Starting up...')
 
+        ps = self.r.pubsub(ignore_subscribe_messages=True)
+        
         # Check if we are already on source:
         tel_state_on_startup = Interface.telescope_state(
             antenna_hash=self.antenna_hash_key)
         if tel_state_on_startup == 'on_source':
-            # If we are on source, initiate recording for any available 
-            # processing nodes 
-            self.record_conditional(self.daq_domain, 
-                                    self.instances, 
-                                    self.duration)                 
+            # If we are on source, potentially initiate recording for any 
+            # available processing nodes 
+            rec_instances = Interface.record_conditional(self.daq_domain, 
+                                         self.instances, 
+                                         self.duration)                 
+            # Listen to each hashpipe instance hash to monitor recording:
+
         else:
             utils.alert('Telescope in state: {}'.format(tel_state_on_startup))
+            rec_instances = []
 
-        ps = self.r.pubsub(ignore_subscribe_messages=True)
         # Listen to antenna station key and compare allocated antennas with 
         # on-source antennas to determine recording readiness 
         ps.subscribe('__keyspace@0__:{}').format(self.antenna_hash_key)
-        
-        for key_cmd in ps.listen():
-            if(key_cmd['data'] == 'set')
+        for updated_key in ps.listen():
+            if updated_key['data'] == 'set':
+                # Check what was updated:
+                channel = updated_key['channel'].split(':')[1]
+                # If the antenna flags have been updated, check if the telescope 
+                # has transitioned between off_source and on source:
+                if channel == self.antenna_hash_key:
+                    tel_state = Interface.telescope_state(antenna_hash=self.antenna_hash_key)
+                    # Stop recording for all instances if telescope moves off 
+                    # source during recording:
+                    if tel_state == 'off_source':
+                        daq_states = self.daq_states(daq_domain, instances)
+                        if len(daq_states['recording']) > 0:
+                            Interface.stop_recording()
+                            # Unsubscribe from any recording keyspace notifications:
 
-            # If we transition to 'off source', check if we should stop recording
+                            # Potentially start processing here:
 
-            # If we transition to 'on source', check if we should start recording
-
-            # If we stop recording, check if we should start processing
+                    # Potentially start recording if the telescope moves on source:
+                    elif tel_state == 'on_source':
+                        rec_instances = Interface.record_conditional(self.daq_domain, 
+                                                     self.instances, 
+                                                     self.duration)                 
+                        # Listen to each hashpipe instance hash to monitor recording:
 
             # If we stop processing, check if we should start postprocessing
 
