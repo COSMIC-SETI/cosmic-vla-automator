@@ -1,6 +1,7 @@
 import json
 import redis
 import os
+
 from datetime import datetime
 
 from logger import log
@@ -56,6 +57,5 @@ class Utils(object):
         """Alert via Slack and log message.
         """
         log.info(message)
-        print(message)
         slack_message = '{} automator: {}'.format(self.timestamp(), message)
         self.slackproxy.post_message(slack_message)
