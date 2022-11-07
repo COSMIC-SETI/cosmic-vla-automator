@@ -91,11 +91,12 @@ class Interface(object):
         """Stop in-progress recording. 
         """
         try:
-            log.info('Stopping recording...')
-            hashpipe_recordStop()
+            self.u.alert('Stopping recording...')
+            self.u.alert('[Would stop recording here]')
+            #hashpipe_recordStop()
         except Exception as e:
-            log.info('Could not stop current recording')
-            log.info(e)
+            self.u.alert('Could not stop current recording')
+            log.error(e)
 
     def daq_record_modes(self, domain, instances):
         """Determine the current selected recording mode for the specified
@@ -274,10 +275,13 @@ class Interface(object):
             # Retrieve on source antennas:
             on_source = self.on_source_antennas()
             if len(on_source) >= (len(antennas) - stragglers):
+                self.u.alert('Telescope on source')
                 return 'on_source'
             else:
+                self.u.alert('Telescope off source')
                 return 'off_source'
         else:
+            self.u.alert('Telescope unconfigured')
             return 'unconfigured'
 
     def src_name(self):
