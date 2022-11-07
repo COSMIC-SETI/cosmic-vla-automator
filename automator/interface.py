@@ -236,7 +236,7 @@ class Interface(object):
             return []
     
 
-    def on_source_antennas(self, ant_hash='META_flagant', on_key='on_source'):
+    def on_source_antennas(self, ant_hash='META_flagAnt', on_key='on_source'):
         """Retrieve the list of on-source antennas.
         """
         on_source = self.u.hget_decoded(self.r, ant_hash, on_key)
@@ -246,7 +246,7 @@ class Interface(object):
             return []
 
 
-    def excluded_antennas(self, ant_hash='META_flagant', ex_key='excluded'):
+    def excluded_antennas(self, ant_hash='META_flagAnt', ex_key='excluded'):
         """Retrieve the list of antennas to be excluded from the current 
         observation.
         """
@@ -257,7 +257,7 @@ class Interface(object):
             return []
 
 
-    def telescope_state(self, stragglers=0, antenna_hash='META_flagant', 
+    def telescope_state(self, stragglers=0, antenna_hash='META_flagAnt', 
         on_key='on_source'):
         """Retrieve the current state of the telescope. This must be 
         achieved by looking at which antennas are actually observing
