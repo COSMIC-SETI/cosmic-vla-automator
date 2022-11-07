@@ -80,7 +80,8 @@ class Interface(object):
             # Set specific gateway key-value pairs
             gateway_keyvals = {'PROJID':'{}'.format(project_id)}
             # Record
-            record(self.r, duration, hashpipe_kv_dict=gateway_keyvals)
+            #record(self.r, duration, hashpipe_kv_dict=gateway_keyvals)
+            self.u.alert("Would record now")
         except Exception as e:
             log.info('Recording failed')
             log.info(e)
@@ -164,6 +165,7 @@ class Interface(object):
         idle = []
         armed = []
         recording = []
+        unknown = []
         for instance in instances:
             if self.daq_receive_state(domain, instance) > 0:
                 rec_error.append(instance)
@@ -175,10 +177,13 @@ class Interface(object):
                     armed.append(instance)
                 if daq_state == 'recording':
                     recording.append(instance)
+                if daq_state == 'unknown':
+                    unknown.append(instance)
         states = {'rec_error':rec_error,
                   'idle':idle,
                   'armed':armed,
-                  'recording':recording}
+                  'recording':recording,
+                  'unknown':unknown}
         return states
     
 
@@ -202,7 +207,10 @@ class Interface(object):
         pktstart = self.u.hashpipe_key_status(self.r, domain, instance, 'PKTSTART')
         pktstop = self.u.hashpipe_key_status(self.r, domain, instance, 'PKTSTOP')
         
-        # ToDo: handle None return values
+        # If any of these can't be retrieved, don't trust any of them
+        if None in [pktidx, pktstart, pktstop]:
+            return 'unknown'
+
         # ToDo: pipelining Redis requests
 
         if pktidx < pktstart:
@@ -275,10 +283,8 @@ class Interface(object):
             # Retrieve on source antennas:
             on_source = self.on_source_antennas()
             if len(on_source) >= (len(antennas) - stragglers):
-                self.u.alert('Telescope on source')
                 return 'on_source'
             else:
-                self.u.alert('Telescope off source')
                 return 'off_source'
         else:
             self.u.alert('Telescope unconfigured')
