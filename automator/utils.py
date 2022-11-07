@@ -1,6 +1,7 @@
 import json
 import redis
 import os
+import time
 
 from datetime import datetime
 
@@ -26,8 +27,14 @@ class Utils(object):
         """
         # Retrieve hash value for r_key:
         val = r.hget(r_hash, r_key)
-        # Deserialise:
-        if val is not None: # key exists
+        if val is None:
+            log.warning('{} from {} returns None'.format(r_key, r_hash))
+            log.warning('Reattempting once...')
+            # Brief delay to allow gateways to update
+            time.sleep(0.1)
+            val = r.hget(r_hash, r_key)
+        else: # key exists
+        # Try to deserialise:
             try:
                 val = json.loads(val)
             except json.decoder.JSONDecodeError:
