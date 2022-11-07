@@ -50,6 +50,7 @@ class Automator(object):
         self.instances = instances
         self.daq_domain = daq_domain
         self.duration = duration
+        self.telescope_state = 'unknown'
 
 
     def start(self):
@@ -62,12 +63,15 @@ class Automator(object):
         telescope_on_startup = self.interface.telescope_state(
             antenna_hash=self.antenna_hash_key
             )
+        self.u.alert('Telescope on startup: {}'.format(telescope_on_startup))
+        self.telescope_state = telescope_on_startup
         if telescope_on_startup == 'on_source':
             self.telescope_on_source(self, ps)
 
         # Listen to antenna station key to compare allocated antennas with 
         # on-source antennas to determine recording readiness 
-        ps.subscribe('__keyspace@0__:{}').format(self.antenna_hash_key)
+        self.u.alert('Listening to telescope state...')
+        ps.subscribe('__keyspace@0__:{}'.format(self.antenna_hash_key))
 
         # Check incoming messages. 
         for updated_key in ps.listen():
@@ -124,15 +128,19 @@ class Automator(object):
         """Actions to take if telescope state changes.
         """
         # Retrieve new telescope state:
-        tel_state = self.interface.telescope_state(
+        telescope_state = self.interface.telescope_state(
             antenna_hash=self.antenna_hash_key
             )
+        # Return if telescope state has not changed from prior state
+        if telescope_state == self.telescope_state:
+            return
+        self.telescope_state = telescope_state
         # Stop recording for all instances if telescope moves off 
         # source during recording:
-        if tel_state == 'off_source':
+        if telescope_state == 'off_source':
             self.telescope_off_source(ps)
         # Potentially start recording if the telescope moves on source:
-        elif tel_state == 'on_source':
+        elif telescope_state == 'on_source':
             self.telescope_on_source(ps)
 
 
@@ -141,7 +149,7 @@ class Automator(object):
         """
         daq_states = self.interface.daq_states(self.daq_domain, self.instances)
         recording = daq_states['recording']
-        if len(recording)) > 0:
+        if len(recording) > 0:
             self.interface.stop_recording()
             # Unsubscribe from any recording keyspace notifications
             self.unsubscribe_instances(self.daq_domain, recording, ps)
