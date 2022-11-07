@@ -25,22 +25,20 @@ class Utils(object):
     def hget_decoded(self, r, r_hash, r_key):
         """Fetch a single redis key from a hash.
         """
-        # Retrieve hash value for r_key:
-        val = r.hget(r_hash, r_key)
-        if val is None:
-            log.warning('{} from {} returns None'.format(r_key, r_hash))
-            log.warning('Reattempting once...')
-            # Brief delay to allow gateways to update
-            time.sleep(0.1)
+        # Check if key actually exists
+        if r.exists(r_hash):
+            # Retrieve hash value for r_key:
             val = r.hget(r_hash, r_key)
-        else: # key exists
-        # Try to deserialise:
+            # Try to deserialise:
             try:
                 val = json.loads(val)
             except json.decoder.JSONDecodeError:
                 log.warning('Could not decode: {}'.format(val))
                 log.warning('Returning as a string.')
-        return val
+            return val
+        else:
+            self.alert('Hash {} does not exist'.format(r_hash))
+            return
     
     def hashpipe_key_status(self, r, domain, instance, key, group=None):
         """Retrieve the value of a hashpipe-redis gateway status key.
