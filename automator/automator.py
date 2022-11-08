@@ -66,7 +66,7 @@ class Automator(object):
         self.u.alert('Telescope on startup: {}'.format(telescope_on_startup))
         self.telescope_state = telescope_on_startup
         if telescope_on_startup == 'on_source':
-            self.telescope_on_source(self, ps)
+            self.telescope_on_source(ps)
 
         # Listen to antenna station key to compare allocated antennas with 
         # on-source antennas to determine recording readiness 

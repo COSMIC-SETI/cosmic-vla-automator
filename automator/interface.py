@@ -44,7 +44,7 @@ class Interface(object):
         # Check if F-engines are transmitting packets:
         if self.fengine_state() == 'disabled':
             self.u.alert('F-engines disabled, therefore not recording.')
-            return 
+            return [] 
     
         # Check DAQ states for each host
         daq_states = self.daq_states(daq_domain, instances)
