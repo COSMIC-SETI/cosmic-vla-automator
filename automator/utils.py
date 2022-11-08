@@ -9,6 +9,7 @@ from logger import log
 
 # Temporary local slackbot class:
 from slackbot import SlackBot
+# from cosmic.observations.slackbot import SlackBot
 
 SLACK_ENV_VAR = "AUTOMATOR_SLACK_TOKEN"
 SLACK_CHANNEL = "cosmic-vla-automator"
@@ -35,6 +36,8 @@ class Utils(object):
             except json.decoder.JSONDecodeError:
                 log.warning('Could not decode: {}'.format(val))
                 log.warning('Returning as a string.')
+            except TypeError:
+                log.warning('Cannot decode NoneType.')
             return val
         else:
             self.alert('Hash {} does not exist'.format(r_hash))
