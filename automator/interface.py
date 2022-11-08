@@ -42,8 +42,8 @@ class Interface(object):
         """
     
         # Check if F-engines are transmitting packets:
-        if self.fengine_state() == 'disabled':
-            self.u.alert('F-engines disabled, therefore not recording.')
+        if len(self.fengine_states()) == 0:
+            self.u.alert('No F-engines enabled, therefore not recording.')
             return [] 
     
         # Check DAQ states for each host
@@ -108,27 +108,21 @@ class Interface(object):
             modes[instance] = self.u.hashpipe_key_status(self.r, domain, instance, 'HPCONFIG')
         return modes
 
-    def fengine_state(self, stragglers=0):
+    def fengine_states(self):
         """Determines the (aggregate) current state of the F-engines.
         """
         # Retrieve F-engine to antenna mapping:
         feng_antenna_map = ant_remotefeng_map.get_antennaFengineDict(self.r)
         # Check F-engine states:
-        n_fengines = 0
-        n_enabled = 0
+        enabled = []
         for antenna, fengine in feng_antenna_map.items():
             tx_status = fengine.tx_enabled()
             # tx_enabled() returns [1] if transmitting
             if(tx_status[0] == 1):
-                n_fengines += 1
-                n_enabled += 1
+                enabled.append(antenna)
             else:
-                n_fengines += 1
                 log.warning('F-engine for antenna: {} is not enabled'.format(antenna))
-        if(n_enabled >= n_fengines - stragglers):
-            return 'enabled'
-        else:
-            return 'disabled'
+        return enabled
 
     def outputdirs(self, domain, instances):
         """Determine the full filepath for the output directories for each 
@@ -316,7 +310,7 @@ def cli(args = sys.argv[0]):
         print("                             instances: list of instances")
         print("\n    stop_record          Stop current in-progress recording.")
         print("\n    telescope_state      Current state of the telescope")
-        print("\n    fengine_state        Aggregate F-engine state")
+        print("\n    fengine_states       List of antennas with enabled F-engines")
         print("\n    expected_antennas    List of antennas which should be active")
         print("\n    excluded_antennas    List of antennas which should be excluded")
         print("\n    daq_states           DAQ statuses. Requires args:")
@@ -361,8 +355,8 @@ def cli(args = sys.argv[0]):
     if command == 'telescope_state':
         print(interface.telescope_state())
         return
-    if command == 'fengine_state':
-        print(interface.fengine_state())
+    if command == 'fengine_states':
+        print(interface.fengine_states())
         return
     if command == 'expected_antennas':
         print(interface.expected_antennas())
