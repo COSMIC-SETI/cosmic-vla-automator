@@ -134,6 +134,8 @@ class Automator(object):
         # Return if telescope state has not changed from prior state
         if telescope_state == self.telescope_state:
             return
+        self.u.alert("Telescope changing from {} to {}".format(
+            self.telescope_state, telescope_state))
         self.telescope_state = telescope_state
         # Stop recording for all instances if telescope moves off 
         # source during recording:
@@ -161,6 +163,8 @@ class Automator(object):
         """If the telescope moves on source, the following actions
         are taken. 
         """
+        new_source = self.interface.src_name()
+        self.u.alert("On source: {}".format(new_source))
         # If we are on source, potentially initiate recording for any 
         # available processing nodes 
         rec_instances = self.interface.record_conditional(
