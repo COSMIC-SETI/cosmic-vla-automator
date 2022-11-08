@@ -83,10 +83,9 @@ since phase centers must be calculated from separate segments of recorded data.
 Here, we are able to shrink processing enough such that we can have the field
 of view around each phase center overlap. 
 
-- **Is this possible to do? Can phase centers be calculated for overlapping
-segments of recorded data, given that delay compensation happens on the FPGAs?**
-
-- **Do phase centers need to be recalculated for each field like this?**
+In this case, since the FPGAs must pick a phase center for any given time sample,
+processing the overlapping data blocks requires re-phasing them to the appropriate
+pointing when the data are reused.
 
 This way, none of the sky is missed. 
 This means that overlapping sections of the recorded data are needed for each 
