@@ -23,7 +23,6 @@ class Automator(object):
     processing nodes. 
 
     TODO: implement retries for certain operations
-    TODO: implement slack notifications for operational stages
     """
 
     def __init__(self, redis_endpoint, antenna_key, instances, daq_domain, 
@@ -33,6 +32,10 @@ class Automator(object):
         Args:
             redis_endpoint (str): Redis endpoint (of the form 
             <host IP address>:<port>)
+            antenna_key (str): key for antenna assignment hash. 
+            instances List[str]: List of instances, eg. cosmic-gpu-0/0
+            daq_domain: Hashpipe gateway domain for the DAQs
+            duration: Standard recording duration in seconds. 
         
         Returns:
             None
@@ -92,19 +95,23 @@ class Automator(object):
 
     def recording_state_change(self, ps, channel):
         """Actions to take if recording state changes.
+
         """
         instance = self.parse_instance(channel)
         if instance is not None:
             # Get new recording state:
-            new_state = self.u.daq_record_state(self.daq_domain, instance)
-            if new_state == 'idle':
-                # Transition to idle
+            new_state = self.interface.daq_record_state(self.daq_domain, instance)
+            # If DAQ has transitioned to idle based on PKTIDX calculations
+            if new_state == 'idle' or new_state == 'armed':
+                # DAQ has finished recording
                 # Unsubscribe from any recording keyspace notifications
+                self.u.alert('{}: DAQ state: {}'.format(instance, new_state))
                 self.unsubscribe_instances(self.daq_domain, [instance], ps)
-
                 self.u.alert('Would initiate processing: {}'.format(instance))
+            if new_state == 'unknown':
+                self.u.alert('DAQ state unknown for: {}'.format(instance))
             else:
-                self.u.alert('{}: new state: {}'.format(instance, new_state))
+                log.info('{}: DAQ state: {}'.format(instance, new_state))
 
 
     def parse_instance(self, channel):
@@ -113,7 +120,7 @@ class Automator(object):
         available instances. 
         """
         try:
-            instance = channel.split('{}://', 1)[1]
+            instance = channel.split('://', 1)[1]
             instance = instance.split('/status')[0]
             if instance in self.instances:
                 return instance
