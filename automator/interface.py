@@ -57,11 +57,10 @@ class Interface(object):
         # idle list. 
 
         # Would check here for "wait" conditions
-        self.u.alert("Would record now")
-        # self.record_fixed(duration, daq_states[idle], project_id) 
-        self.u.alerts("Instructed {} to record".format(daq_states[idle]))
+        self.record_fixed(duration, daq_states['idle'], project_id) 
+        self.u.alert("Instructed {} to record".format(daq_states['idle']))
         # Return the list of instances that have been instructed to record
-        return daq_states[idle]
+        return daq_states['idle']
 
 
     def record_fixed(self, duration, instances, project_id='discard'):
@@ -80,8 +79,7 @@ class Interface(object):
             # Set specific gateway key-value pairs
             gateway_keyvals = {'PROJID':'{}'.format(project_id)}
             # Record
-            #record(self.r, duration, hashpipe_kv_dict=gateway_keyvals)
-            self.u.alert("Would record now")
+            record(self.r, duration, hashpipe_kv_dict=gateway_keyvals)
         except Exception as e:
             log.info('Recording failed')
             log.info(e)
@@ -93,8 +91,7 @@ class Interface(object):
         """
         try:
             self.u.alert('Stopping recording...')
-            self.u.alert('[Would stop recording here]')
-            #hashpipe_recordStop()
+            hashpipe_recordStop()
         except Exception as e:
             self.u.alert('Could not stop current recording')
             log.error(e)
