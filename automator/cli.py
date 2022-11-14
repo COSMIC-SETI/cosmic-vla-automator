@@ -25,7 +25,7 @@ def cli(args = sys.argv[0]):
                         default = 'hashpipe', 
                         help = 'DAQ domain')
     parser.add_argument('--duration', 
-                        type = str,
+                        type = int,
                         default = '60', 
                         help = 'Recording duration, in seconds')
     parser.add_argument('--instances',
