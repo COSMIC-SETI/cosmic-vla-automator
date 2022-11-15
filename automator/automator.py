@@ -99,21 +99,31 @@ class Automator(object):
         """
         instance = self.parse_instance(channel)
         if instance is not None:
-            # Get new recording state:
+
+            # Get new and old daq states for this instance:
             new_state = self.interface.daq_record_state(self.daq_domain, instance)
-            # If DAQ has transitioned to idle based on PKTIDX calculations
-            if new_state == 'idle' or new_state == 'armed':
+            old_state = self.daq_states.get(instance, 'unknown')
+            # Update current state:
+            self.daq_states[instance] = new_state
+
+            # if daq is unreachable:
+            if new_state == 'unknown':
+                self.u.alert('DAQ state unknown for: {}'.format(instance))
+                # Take no further action:
+                return
+            
+            # If DAQ has transitioned to from record to idle or armed
+            # based on PKTIDX calculations:
+            if old_state == 'recording' and new_state != 'recording':
                 # DAQ has finished recording
                 # Unsubscribe from any recording keyspace notifications
                 self.u.alert('{}: DAQ state: {}'.format(instance, new_state))
                 self.unsubscribe_instances(self.daq_domain, [instance], ps)
                 # Would transition to processing now:
                 self.process()
-            if new_state == 'unknown':
-                self.u.alert('DAQ state unknown for: {}'.format(instance))
+
             else:
                 log.info('{}: DAQ state: {}'.format(instance, new_state))
-
 
     def parse_instance(self, channel):
         """Given a keyspace channel name for a possible instance, retrieve
@@ -190,7 +200,7 @@ class Automator(object):
             self.u.alert('Listening to DAQ states: {}'.format(rec_instances))
             # Subscribe to hashpipe instance hashes to monitor recording:
             self.subscribe_instances(self.daq_domain, rec_instances, ps)
-            # Set daq states:
+            # Set automator daq states:
             for instance in rec_instances:
                 self.daq_states[instance] = 'record'
 
@@ -203,11 +213,13 @@ class Automator(object):
 
 
     def unsubscribe_instances(self, domain, instances, ps):
-        """Unsubscribe from an instance's gateway hash.
+        """Unsubscribe from an instance's gateway hash. Also remove from
+        local automator dict of last known daq states. 
         """
         for instance in instances:
             instance_channel = '{}://{}/status'.format(domain, instance)
             ps.unsubscribe('__keyspace@0__:{}'.format(instance_channel))
+            self.daq_states.pop(instance)
 
 
 
