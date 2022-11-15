@@ -54,7 +54,7 @@ class Automator(object):
         self.daq_domain = daq_domain
         self.duration = duration
         self.telescope_state = 'unknown'
-
+        self.daq_states = {}
 
     def start(self):
         """Start the automator. Actions to be taken depend on the incoming 
@@ -107,7 +107,8 @@ class Automator(object):
                 # Unsubscribe from any recording keyspace notifications
                 self.u.alert('{}: DAQ state: {}'.format(instance, new_state))
                 self.unsubscribe_instances(self.daq_domain, [instance], ps)
-                self.u.alert('Would initiate processing: {}'.format(instance))
+                # Would transition to processing now:
+                self.process()
             if new_state == 'unknown':
                 self.u.alert('DAQ state unknown for: {}'.format(instance))
             else:
@@ -131,6 +132,13 @@ class Automator(object):
             return
 
 
+    def process(self):
+        """Any discrete processing steps not automatically undertaken go
+        here.
+        """
+        self.u.alert('Any discrete processing steps take place here.')
+
+
     def telescope_state_change(self, ps):
         """Actions to take if telescope state changes.
         """
@@ -141,8 +149,6 @@ class Automator(object):
         # Return if telescope state has not changed from prior state
         if telescope_state == self.telescope_state:
             return
-        self.u.alert("Telescope changing from {} to {}".format(
-            self.telescope_state, telescope_state))
         self.telescope_state = telescope_state
         # Stop recording for all instances if telescope moves off 
         # source during recording:
@@ -156,14 +162,15 @@ class Automator(object):
     def telescope_off_source(self, ps):
         """If the telescope moves off source, the following actions are taken.
         """
-        daq_states = self.interface.daq_states(self.daq_domain, self.instances)
-        recording = daq_states['recording']
+        self.u.alert("Telescope off source")
+        daqs = self.interface.daq_states(self.daq_domain, self.instances)
+        recording = daqs['recording']
         if len(recording) > 0:
             self.interface.stop_recording()
             # Unsubscribe from any recording keyspace notifications
             self.unsubscribe_instances(self.daq_domain, recording, ps)
             # Potentially start processing here:
-            self.u.alert('Processing would begin for: {}'.format(recording))
+            self.process()
 
 
     def telescope_on_source(self, ps):
@@ -171,7 +178,7 @@ class Automator(object):
         are taken. 
         """
         new_source = self.interface.src_name()
-        self.u.alert("On source: {}".format(new_source))
+        self.u.alert("Telescope on source: {}".format(new_source))
         # If we are on source, potentially initiate recording for any 
         # available processing nodes 
         rec_instances = self.interface.record_conditional(
@@ -180,9 +187,12 @@ class Automator(object):
             self.duration
             )
         if len(rec_instances) > 0:
+            self.u.alert('Listening to DAQ states: {}'.format(rec_instances))
             # Subscribe to hashpipe instance hashes to monitor recording:
             self.subscribe_instances(self.daq_domain, rec_instances, ps)
-
+            # Set daq states:
+            for instance in rec_instances:
+                self.daq_states[instance] = 'record'
 
     def subscribe_instances(self, domain, instances, ps):
         """Subscribe to monitor each instance's gateway hash.
