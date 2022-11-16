@@ -84,6 +84,7 @@ Note: must be non-blocking
 Note: must be non-blocking  
 
 **args:** 
+- `proc_type` (str): processing step to request  
 - `raw_dir` (str): file path to output directory 
 - `instances` (List[str]): list of instances which must attempt processing
 
