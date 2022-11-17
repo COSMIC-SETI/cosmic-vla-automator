@@ -1,129 +1,37 @@
 # Interfacing requirements for the automator
 
-## Status keys:
-
-These keys should be set as close to the originating source as possible. E.g. 
-in the case of the VLA, `mcast2redis.py` should set some of these directly 
-upon receiving a metadata packet.  
-
-These keys are expected to be updated the instant they change. There is no 
-need for timestamps as Redis provides this already. 
-
-1. **Current fengine status:**  
-**key:** `fengine_status`  
-**value:** JSON dict containing `{<antenna>:<status>}`  
-**status:** can be `enabled`, `disabled`, `error`
-
-2. **Current observing mode:**  
-**key:** `obs_mode`  
-**value:** string containting observing mode  
-**status:** [What possibilities currently exist?] 
-
-3. **Recording output directories:**  
-**key:** `<host/instance>:raw_dir`  
-**value:** File path to current directory in which raw files will be written
-
-4. **Current processing status**  
-**key:** `<host/instance>:proc_stat`  
-**value:** Current status of processing  
-**status:** `processing`, `idle`, `error`
-
-5. **Current processing type/description**  
-**key:** `<host/instance>:proc_name`  
-**value:** Name of current processing state  
-
-6. **Processing output directory**  
-**key:** `<host/instance>:proc_dir`  
-**value:** Directory in which processing data products are currently being 
-written    
+The Automator's actions fall into 2 categories:
+	- Command: issuance of an event on the telescope
+	- Reflect: reflection on the state of an aspect of the telescope
 
 
-## Actions
+## Commands:
 
-For these commands, implement an API or library that can be imported, from 
-which the required commands can be imported. 
+### 1. Observation possible?
+This commands the telescope to report an observation that is possible to undertake.
 
-For example:
-```
-from telescope_control import record
-```
+Interface-method call: `command_observation_possible()`
 
-### record_conditional
+It sets the `COMMAND` key of the `observations_possible` redis-hash to a value of `"QUERY"`.
 
-Note: must be non-blocking 
+### 2. Observe.
+This commands the telescope to undertake an observation that it reported as possible.
 
-Attempts to record based on conditions stored in config file.  
+Interface-method call: `command_observation(observation)`
+- `observation`: the value returned by the (`reflect_observation_possible()` Interface-method)[#Reflections:_1._Observation_possible.].
 
-**args:**  
-- `config` (str): file path to config file (Not strictly necessary for COSMIC, but I'm
-asking for this here to help us keep it in the same place).
-- `raw_dir` (str): file path to output directory (over-arching, this function could create 
-new subdirectories beneath this, for example).
-- `instances` (List[str]): List of instances for which recording should proceed on if 
-conditions are met. 
+It sets the `COMMAND` key of the `observation` redis-hash to a value of `observation`.
 
-**returns:**
-- True if conditions are met and recording is actually going to take place
-- False if conditions are not met and recording is not going to take place
+## Reflections:
 
-### record
+### 1. Observation possible.
+This reflects on the response of the (`command_observation_possible()` Interface-method)[#Commands:_1._Observation_possible?].
 
-Note: must be non-blocking
+It returns the value of the `STATUS` key in the `observations_possible` redis-hash, only replacing the value with the Pythonic `None` if the value is `"None"`.
 
-**args:** 
-- `duration` (float): recording duration in seconds  
-- `raw_dir` (str): entire file path to final output directory 
-- `instances` (List[str]): list of instances which must record
+### 2. Observation
+This reflects on the status of an observation that is the result of the (`command_observation()` Interface-method)[#Commands:_1._Observe.].
 
-**returns:**
-- True if succesfully requested
-- False if not. 
+It returns the value of the `STATUS` key in the `observation` redis-hash. The value's range is: [`"Pending"`, `"Succeeded"`, `"Failed"`]. A value outside of this range causes a `ValueError` to be raised.
 
-### process
-
-Note: must be non-blocking  
-
-**args:** 
-- `proc_type` (str): processing step to request  
-- `raw_dir` (str): file path to output directory 
-- `instances` (List[str]): list of instances which must attempt processing
-
-**returns:**
-- True if succesfully requested
-- False if not. 
-
-### stop_recording
-
-Note: can be blocking. 
-
-**args:** 
-- `instances` (List[str]): list of instances which must immediately stop 
-recording
-
-**returns:**
-- True if succesful
-- False if not
-
-### configure
-
-Note: must be non-blocking  
-
-**args:**  
-- `mode` (str): observing mode
-
-**returns:**
-- True if succesfully requested  
-- False if not. 
-
-### delete
-
-- Note: expected to be blocking.
-
-**args:**  
-- `instances` (List[str]): list of instances which must perform local deletion  
-- `directory` (str): The full file path to a directory whose entire contents 
-must be deleted
-
-**returns:**
-- List[str] of instances for which deletion was successful.  
 
