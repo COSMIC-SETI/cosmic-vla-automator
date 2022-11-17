@@ -1,5 +1,4 @@
-# import redis
-import sys
+import redis
 import logging
 
 # from logger import log
@@ -19,12 +18,13 @@ class Interface(object):
 
     def __init__(self, redis_host, redis_port):
         self.r = None
-        # self.r = redis.StrictRedis(
-        #     host=redis_host,
-        #     port=redis_port,
-        #     decode_responses=True
-        # )
+        self.r = redis.StrictRedis(
+            host=redis_host,
+            port=redis_port,
+            decode_responses=True
+        )
 
+    # 1. Observation possible?
     def command_observation_possible(self):
         self.r.hset("observations_possible", "COMMAND", "QUERY")
 
@@ -34,6 +34,7 @@ class Interface(object):
             return None
         return value
 
+    # 2. Observe.
     def command_observation(self, possible_observation):
         self.r.hset("observation", "COMMAND", possible_observation)
 
@@ -52,7 +53,7 @@ def cli():
 
     parser = argparse.ArgumentParser(
         description="Manually execute Automator-Interface actions.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter  # set the thing so defaults are displayed in the usage printout
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
         "--redis-host",
@@ -67,11 +68,18 @@ def cli():
         help="The redis host's port.",
     )
 
-    possible_commands = [attr for attr in dir(Interface) if attr.split('_')[0] in ['reflect', 'command']]
+    possible_commands = [
+        attr
+        for attr in dir(Interface)
+        if attr.split('_')[0] in ['reflect', 'command']
+    ]
     parser.add_argument(
         "command",
         type=str,
-        help=f"The Automator-Interface method to execute. Options are:\n\t{possible_commands}.",
+        help=(
+            "The Automator-Interface method to execute. "
+            f"Options are:\n\t{possible_commands}."
+        )
     )
     parser.add_argument(
         "command_arguments",
@@ -79,7 +87,7 @@ def cli():
         nargs="*",
         help="The Automator-Interface method's positional arguments.",
     )
-    
+
     args = parser.parse_args()
     parser
 
@@ -87,14 +95,13 @@ def cli():
         args.redis_host,
         args.redis_port,
     )
-    
+
     interface_method = getattr(interface, args.command)
     try:
         interface_method(*args.command_arguments)
     except BaseException as err:
         print(repr(err))
 
+
 if __name__ == "__main__":
     cli()
-
-
