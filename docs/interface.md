@@ -1,37 +1,36 @@
 # Interfacing requirements for the automator
 
-The Automator's actions fall into 2 categories:
+The responses of the Automator's actions are separated from the issuance of the action, in order open actions up to being carried out over any abstract channel, as opposed to just the process's call stack. The interface
+methods thusly fall into 2 categories:
 	- Command: issuance of an event on the telescope
 	- Reflect: reflection on the state of an aspect of the telescope
 
+Because this dichotomy essentially makes the actions asynchronous, the reflection is triggered by a change in the associated redis-hash (enabled by keyspace monitoring). Reflection methods return a value, which must be a primitive or a collection of primitives.
 
-## Commands:
+## Actions:
 
 ### 1. Observation possible?
-This commands the telescope to report an observation that is possible to undertake.
 
-Interface-method call: `command_observation_possible()`
+The action is to query the telescope about whether or not an observation is possible, and if so what that observation is.
 
-It sets the `COMMAND` key of the `observations_possible` redis-hash to a value of `"QUERY"`.
+Command method call | Description
+-|-
+`command_observation_possible()` | Set the `COMMAND` key in the `observations_possible` redis-hash to `"QUERY"`.
+
+
+Reflection method call | Description
+-|-
+`reflect_observation_possible()` | Return the value of the `STATUS` key in the `observations_possible` redis-hash. **Only a value of `"None"` is altered, to the Pythonic `None`**.
 
 ### 2. Observe.
-This commands the telescope to undertake an observation that it reported as possible.
+This action commands the telescope to undertake an observation that it reported as possible.
 
-Interface-method call: `command_observation(observation)`
-- `observation`: the value returned by the (`reflect_observation_possible()` Interface-method)[#Reflections:_1._Observation_possible.].
+Command method call | Description
+-|-
+`command_observation(observation)` | Set the `COMMAND` key of the `observation` redis-hash to `observation`, the value returned by the `reflect_observation_possible()` method.
 
-It sets the `COMMAND` key of the `observation` redis-hash to a value of `observation`.
-
-## Reflections:
-
-### 1. Observation possible.
-This reflects on the response of the (`command_observation_possible()` Interface-method)[#Commands:_1._Observation_possible?].
-
-It returns the value of the `STATUS` key in the `observations_possible` redis-hash, only replacing the value with the Pythonic `None` if the value is `"None"`.
-
-### 2. Observation
-This reflects on the status of an observation that is the result of the (`command_observation()` Interface-method)[#Commands:_1._Observe.].
-
-It returns the value of the `STATUS` key in the `observation` redis-hash. The value's range is: [`"Pending"`, `"Succeeded"`, `"Failed"`]. A value outside of this range causes a `ValueError` to be raised.
+Reflection method call | Description
+-|-
+`reflect_observation()` | Return the value of the `STATUS` key in the `observation` redis-hash. The value's range is: [`"Pending"`, `"Succeeded"`, `"Failed"`]. A value outside of this range causes a `ValueError` to be raised.
 
 
