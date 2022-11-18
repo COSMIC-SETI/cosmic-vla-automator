@@ -17,7 +17,7 @@ need for timestamps as Redis provides this already.
 2. **Current recording mode:**  
 **key:** `<host/instance>:rec_mode`  
 **value:** string containing recording mode  
-**status:** [What possibilities currently exist? See request in Slack] 
+**status:** can be `voltage` or `correlator` 
 
 3. **Recording output directories:**  
 **key:** `<host/instance>:rec_dir`  
@@ -35,12 +35,12 @@ written
 
 7. **Current recording status:**  
 **key:** `<host/instance>:rec_status`  
-**value:** Recording status
+**value:** Recording status  
 **status:** can be `recording`, `idle`, `error`, `armed`
 
 8. **Current processing status:**  
 **key:** `<host/instance>:proc_status`  
-**value:** Processing status
+**value:** Processing status  
 **status:** can be `processing`, `idle`, `error`, `pending`
 
 9. **Required antennas:** 
@@ -49,25 +49,22 @@ written
 
 ### These below pretty much exist already
 
-10. **Current antenna tracking status:**  [already exists pretty much]
+10. **Current antenna tracking status:**  [already exists pretty much]  
 **key:** `on_source_antennas`  
 **value:** List of on source antennas
 
-11. **Source name:** [already exists]
+11. **Source name:** [already exists]  
 **key:** `src_name`  
 **value:** Current primary source
 
-12. **Primary RA:** [already exists]
+12. **Primary RA:** [already exists]  
 **key:** `ra`  
 **value:** Current primary RA
 
-13. **Primary Dec:** [already exists]
+13. **Primary Dec:** [already exists]  
 **key:** `dec`  
 **value:** Current primary dec
 
-14. **Primary Dec:** [already exists]
-**key:** `dec`  
-**value:** Current primary dec
 
 
 
