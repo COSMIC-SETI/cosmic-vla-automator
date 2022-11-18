@@ -1,36 +1,75 @@
 # Interfacing requirements for the automator
 
-The responses of the Automator's actions are separated from the issuance of the action, in order open actions up to being carried out over any abstract channel, as opposed to just the process's call stack. The interface
-methods thusly fall into 2 categories:
-	- Command: issuance of an event on the telescope
-	- Reflect: reflection on the state of an aspect of the telescope
+## Redis status keys:
 
-Because this dichotomy essentially makes the actions asynchronous, the reflection is triggered by a change in the associated redis-hash (enabled by keyspace monitoring). Reflection methods return a value, which must be a primitive or a collection of primitives.
+These keys should be set as close to the originating source as possible. E.g. 
+in the case of the VLA, `mcast2redis.py` should set some of these directly 
+upon receiving a metadata packet.  
 
-## Actions:
+These keys are expected to be updated the instant they change. There is no 
+need for timestamps as Redis provides this already. 
 
-### 1. Observation possible?
+1. **Current fengine status:**  
+**key:** `fengine_status`  
+**value:** JSON dict containing `{<antenna>:<status>}`  
+**status:** can be `enabled`, `disabled`, `error`
 
-The action is to query the telescope about whether or not an observation is possible, and if so what that observation is.
+2. **Current recording mode:**  
+**key:** `<host/instance>:rec_mode`  
+**value:** string containing recording mode  
+**status:** [What possibilities currently exist? See request in Slack] 
 
-Command method call | Description
--|-
-`command_observation_possible()` | Set the `COMMAND` key in the `observations_possible` redis-hash to `"QUERY"`.
+3. **Recording output directories:**  
+**key:** `<host/instance>:rec_dir`  
+**value:** File path to current directory in which raw files will be written
+
+4. **Current processing status**  
+**key:** `<host/instance>:proc_stat`  
+**value:** Current status of processing  
+**status:** `processing`, `idle`, `error`
+
+6. **Processing output directory**  
+**key:** `<host/instance>:proc_dir`  
+**value:** Upper directory in which processing data products are currently being 
+written    
+
+7. **Current recording status:**  
+**key:** `<host/instance>:rec_status`  
+**value:** Recording status
+**status:** can be `recording`, `idle`, `error`, `armed`
+
+8. **Current processing status:**  
+**key:** `<host/instance>:proc_status`  
+**value:** Processing status
+**status:** can be `processing`, `idle`, `error`, `pending`
+
+9. **Required antennas:** 
+**key:** `required_antennas`  
+**value:** List of antennas required for current observation.
+
+### These below pretty much exist already
+
+10. **Current antenna tracking status:**  [already exists pretty much]
+**key:** `on_source_antennas`  
+**value:** List of on source antennas
+
+11. **Source name:** [already exists]
+**key:** `src_name`  
+**value:** Current primary source
+
+12. **Primary RA:** [already exists]
+**key:** `ra`  
+**value:** Current primary RA
+
+13. **Primary Dec:** [already exists]
+**key:** `dec`  
+**value:** Current primary dec
+
+14. **Primary Dec:** [already exists]
+**key:** `dec`  
+**value:** Current primary dec
 
 
-Reflection method call | Description
--|-
-`reflect_observation_possible()` | Return the value of the `STATUS` key in the `observations_possible` redis-hash. **Only a value of `"None"` is altered, to the Pythonic `None`**.
 
-### 2. Observe.
-This action commands the telescope to undertake an observation that it reported as possible.
-
-Command method call | Description
--|-
-`command_observation(observation)` | Set the `COMMAND` key of the `observation` redis-hash to `observation`, the value returned by the `reflect_observation_possible()` method.
-
-Reflection method call | Description
--|-
-`reflect_observation()` | Return the value of the `STATUS` key in the `observation` redis-hash. The value's range is: [`"Pending"`, `"Succeeded"`, `"Failed"`]. A value outside of this range causes a `ValueError` to be raised.
 
 

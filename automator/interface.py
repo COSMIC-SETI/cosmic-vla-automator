@@ -1,45 +1,77 @@
 import redis
 import logging
 
-# from logger import log
-# from utils import Utils
-
-
 class Interface(object):
-    """Observing interface class. Provides the functions
-    that constitute the automator.
-
-    Offers the following:
-        - Command an query of what observations are possible, now
-        - Reflect what the telescope can observe
-        - Command an observation
-        - Reflect an observation
+    """Observing interface class. Provides all automator
+    retrieval and command functions.  
     """
 
     def __init__(self, redis_host, redis_port):
-        self.r = None
-        self.r = redis.StrictRedis(
-            host=redis_host,
-            port=redis_port,
-            decode_responses=True
-        )
+        try:
+            self.r = redis.StrictRedis(
+                host=redis_host,
+                port=redis_port,
+                decode_responses=True
+            )
+        except:
+            log.info('Failed to connect to Redis')
+    
 
-    # 1. Observation possible?
-    def command_observation_possible(self):
-        self.r.hset("observations_possible", "COMMAND", "QUERY")
+    def internal_conditions(self):
+        """Check if there are any underlying telescope-specific observing 
+        conditions set via internal configuration.
+        
+        Args:
+            None 
 
-    def reflect_observation_possible(self):
-        value = self.r.hget("observations_possible", "STATUS")
-        if value == "None":
-            return None
-        return value
+        Returns:
+            True if ANY conditions exist
+            False if NO conditions exist 
+        """
 
-    # 2. Observe.
-    def command_observation(self, possible_observation):
-        self.r.hset("observation", "COMMAND", possible_observation)
+    def conditionally_observe(self, instances, output_dir):
+        """Observe (recording, processing and cleanup) respecting underlying
+        telescope-specific low-level observing conditions.
 
-    def reflect_observation(self):
-        return self.r.hget("observation", "STATUS")
+        Args:
+            instances (List[str]): List of instances (e.g. [cosmic-gpu-0/0, 
+            cosmic-gpu-0/1])
+            output_dir (str): File path to recording directory (the same used by 
+            each instance)
+        
+        Returns:
+            List of instances for which conditions are met and recording
+            initiated. 
+        """
+
+    def record(self, instances, duration, rec_dir, rec_type):
+        """Instruct instances to record as above, ignoring most 
+        conditions.  
+        
+        Args:
+            instances (List[str]): List of instances (e.g. [cosmic-gpu-0/0, 
+            cosmic-gpu-0/1])
+            duration (float): Recording duration in seconds.
+            rec_dir (str): File path to recording directory (may contain
+            subdirectories)  
+            rec_type (str): Type of recording to be carried out. May be 
+            `correlator` or 'voltage`           
+        
+        Returns:
+            List of instances which are recording successfully. 
+        """
+
+    def stop_recording(self, instances):
+        """Stop any in-progress recording.
+
+        Args:
+            instances (List[str]): List of instances (e.g. [cosmic-gpu-0/0, 
+            cosmic-gpu-0/1])
+        
+        Returns:
+            List of instances which have stopped recording. 
+        """
+
 
 
 def cli():
