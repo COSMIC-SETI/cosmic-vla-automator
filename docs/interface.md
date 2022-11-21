@@ -2,6 +2,8 @@
 
 ## Redis status keys:
 
+The keys are under the `Automator` hash.
+
 These keys should be set as close to the originating source as possible. E.g. 
 in the case of the VLA, `mcast2redis.py` should set some of these directly 
 upon receiving a metadata packet.  
@@ -35,30 +37,25 @@ need for timestamps as Redis provides this already.
 
 6. **Processing output directory**  
 **key:** `<host/instance>:proc_dir`  
-**value:** Upper directory in which processing data products are currently being 
-written    
-
-7. **Required antennas:** 
-**key:** `required_antennas`  
-**value:** List of antennas required for current observation.
+**value:** Upper directory in which processing data products are currently being  written
 
 ### These below pretty much exist already
 
-9. **Current antenna tracking status:**  [already exists]  
+7. **Current antenna tracking status:**  [already exists]  
 **key:** `on_source_antennas`  
 **value:** List of on source antennas
 
-10. **Source name:** [already exists]  
+8. **Source name:** [already exists]  
 **key:** `src_name`  
 **value:** Current primary source
 
-11. **Primary RA:** [already exists]  
+9. **Primary RA:** [already exists]  
 **key:** `ra`  
-**value:** Current primary RA
+**value:** Current primary right-ascension in degrees
 
-12. **Primary Dec:** [already exists]  
+10. **Primary Dec:** [already exists]  
 **key:** `dec`  
-**value:** Current primary dec
+**value:** Current primary declination in degrees
 
 
 
