@@ -2,10 +2,8 @@ import redis
 import logging
 import inspect
 
-# from logger import log
-# from utils import Utils
-
-
+from logger import log
+from utils import Utils
 
 from cosmic.observations.record import record as cosmic_record, hashpipe_recordStop
 from cosmic.hashpipe_aux import HashpipeKeyValues
@@ -145,7 +143,7 @@ class Interface(object):
             hashpipe_kv_dict = {
                 'PROJID': rec_dir
             },
-            hashpipe_targets = hashpipe_tragets,
+            hashpipe_targets = hashpipe_targets,
             delay_seconds = 3
         )
         return instances
