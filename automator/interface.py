@@ -133,7 +133,7 @@ class Interface(object):
         Returns:
             List of instances which are recording successfully. 
         """
-        hashipe_targets = [
+        hashpipe_targets = [
             HashpipeKeyValues(*instance.split('/'), self.redis_obj)
             for instance in instances
         ]
