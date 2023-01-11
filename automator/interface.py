@@ -181,7 +181,6 @@ class Interface(object):
         """Check if current observation is a VLASS calibration observation of
         a fixed RA/Dec.
         """
-        # VLASS project IDs are TSKY0001 or VLASS*
         intents = self.u.hget_decoded(self.r, 'META', 'intents')
         scan_intent = intents['ScanIntent']
         if 'CALIBRATE' in scan_intent:
@@ -192,13 +191,27 @@ class Interface(object):
     def is_vlass_track(self):
         """Check if current observation is a VLASS track.
         """
-        # VLASS project IDs are TSKY0001 or VLASS*
         intents = self.u.hget_decoded(self.r, 'META', 'intents')
         scan_intent = intents['ScanIntent']
         if scan_intent == 'OBSERVE_TARGET':
             return True
         else:
             return False
+
+    def vlass_metadata(self):
+        """Retrieve VLASS metadata for vlass track observations.
+        """
+        ra = self.u.hget_decoded(self.r, 'META', 'ra')
+        dec = self.u.hget_decoded(self.r, 'META', 'dec')
+        # For the purposes of target selection, return the highest 
+        # frequency for now (enforce same set of targets for both)
+        fcent = max(self.u.hget_decoded(self.r, 'META', 'dec'))
+        intents = self.u.hget_decoded(self.r, 'META', 'intents')
+        ra_rate = intents['AntennaRaRate']
+        ts = intents['AntennaRaRatet0']
+        return ra, dec, fcent, ra_rate, ts
+
+
 
 def cli():
     """CLI for manual command usage.
