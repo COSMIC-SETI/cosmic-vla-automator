@@ -166,6 +166,39 @@ class Interface(object):
         )
         return instances
 
+    def is_vlass_obs(self):
+        """Check if current observation is a VLASS observation. 
+        """
+        # VLASS project IDs are TSKY0001 or VLASS*
+        intents = self.u.hget_decoded(self.r, 'META', 'intents')
+        projid = intents['ProjectID']
+        if projid == 'TSKY0001' or 'VLASS' in projid:
+            return True
+        else:
+            return False
+
+    def is_vlass_cal(self):
+        """Check if current observation is a VLASS calibration observation of
+        a fixed RA/Dec.
+        """
+        # VLASS project IDs are TSKY0001 or VLASS*
+        intents = self.u.hget_decoded(self.r, 'META', 'intents')
+        scan_intent = intents['ScanIntent']
+        if 'CALIBRATE' in scan_intent:
+            return True
+        else:
+            return False
+
+    def is_vlass_track(self):
+        """Check if current observation is a VLASS track.
+        """
+        # VLASS project IDs are TSKY0001 or VLASS*
+        intents = self.u.hget_decoded(self.r, 'META', 'intents')
+        scan_intent = intents['ScanIntent']
+        if scan_intent == 'OBSERVE_TARGET':
+            return True
+        else:
+            return False
 
 def cli():
     """CLI for manual command usage.
