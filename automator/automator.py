@@ -16,7 +16,7 @@ class Automator(object):
     observations possible. See `interface.py` for the atomic actions
     that enable this.
 
-    """
+    """ 
 
     def __init__(self, redis_endpoint, redis_channel):
         """Construct an Automator.
@@ -59,6 +59,7 @@ class Automator(object):
             if msg['data'] == 'hset':
                 new_telescope_state = self.interface.telescope_state()
                 if new_telescope_state != self.telescope_state:
+                    self.telescope_state = new_telescope_state
                     self.telescope_state_change(new_telescope_state)
 
     def telescope_state_change(self, new_state):
@@ -72,7 +73,7 @@ class Automator(object):
         if new_state == 'on_source':    
 
             # Check if VLASS calibrator:
-            if self.interface.is_vlass_calibrator():
+            if self.interface.is_vlass_cal():
                 # Instruct recording to start
                 # How long do we want on calibrators?
                 self.interface.record_minimal(time.time() + 1, 60, 'COSMIC_TEST')
