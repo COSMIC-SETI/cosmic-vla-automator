@@ -211,7 +211,22 @@ class Interface(object):
         ts = intents['AntennaRaRatet0']
         return ra, dec, fcent, ra_rate, ts
 
-
+    def request_targets(self, new_targets_chan, ts, src, ra_deg, dec_deg, fecenter):
+        """Request new targets from the target selector.  
+        NOTE: Will be replaced with updated targets-minimal process. 
+        """
+        telescope_name = 12  
+        subarray_name = 'array_1'
+        msg = '{}:{}:{}:{}:{}:{}:{}'.format(
+            telescope_name,
+            subarray_name,
+            ts,
+            src,
+            ra_deg,
+            dec_deg,
+            fecenter
+        )
+        self.redis_obj.publish(new_targets_chan, msg)
 
 def cli():
     """CLI for manual command usage.
