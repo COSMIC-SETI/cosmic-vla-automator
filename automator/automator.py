@@ -39,7 +39,8 @@ class Automator(object):
             redis_host,
             redis_port
         )
-        self.channel = redis_channel
+        self.antenna_hash_key = redis_channel
+        self.telescope_state = 'unknown'
 
     def start(self):
         """Start the automator. Actions to be taken depend on the incoming 
@@ -48,46 +49,62 @@ class Automator(object):
         
         self.u.alert('Starting up...')
         ps = self.r.pubsub(ignore_subscribe_messages=True)
-        ps.subscribe(self.channel)
+        self.u.alert('Listening to telescope state...')
+        ps.subscribe('__keyspace@0__:{}'.format(self.antenna_hash_key))
 
         for msg in ps.listen():
 
-            # Upon receiving a new alert message, 
-            # check if the telescope is tracking
-            if msg['data'] == 'on_source':
+            # For now, monitor antennas to determine if the 
+            # telescope is on source or not. 
+            if msg['data'] == 'hset':
+                new_telescope_state = self.interface.telescope_state()
+                if new_telescope_state != self.telescope_state:
+                    self.telescope_state_change(new_telescope_state)
 
-                # Check if VLASS observation:
-                if self.interface.is_vlass_calibrator():
-                   # Record (for how long?)
+    def telescope_state_change(self, new_state):
+        """Actions to take if the state of the telescope changes.
+        """
+        
+        if new_state == 'off_source':
+            # Stop recording
+            self.interface.stop_all()
+        
+        if new_state == 'on_source':    
 
-                if self.interface.is_vlass_track():
-                    
-                    # Retrieve metadata:
-                    ra, dec, fcent, ra_rate, ts = self.interface.vlass_metadata()
+            # Check if VLASS calibrator:
+            if self.interface.is_vlass_calibrator():
+                # Instruct recording to start
+                # How long do we want on calibrators?
+                self.interface.record_minimal(time.time() + 1, 60, 'COSMIC_TEST')
+                self.u.alert('Recording VLASS calibrator.')
 
-                    # Calculate phase center:
-                    # Using VLASS standard slew rate of 3.3 arcmin/sec (0.055 deg/sec) 
-                    # until ra_rate units are understood
-                    ra_c, dec_c = self.select_phase_center(0.055, ts, ra, dec)
-                    self.r.set('phase_center_ra', '{ra_c}')
-                    self.r.set('phase_center_dec', '{dec_c}')
+            # Check if VLASS track:
+            if self.interface.is_vlass_track():
+                # Retrieve metadata:
+                ra, dec, fcent, ra_rate, ts = self.interface.vlass_metadata()
+                # Calculate phase center:
+                # Using VLASS standard slew rate of 3.3 arcmin/sec (0.055 deg/sec) 
+                # until ra_rate units are understood
+                ra_c, dec_c = self.select_phase_center(0.055, ts, ra, dec)
+                self.r.set('phase_center_ra', '{ra_c}')
+                self.r.set('phase_center_dec', '{dec_c}')
+                # Request new targets around phase center
+                self.interface.request_targets(
+                    TARGETS_CHAN, 
+                    ts, 
+                    'VLASS', 
+                    ra_c, 
+                    dec_c, 
+                    fcent
+                    )
+                # Instruct recording to start
+                self.interface.record_minimal(time.time() + 1, 10, 'COSMIC_TEST')
+                self.u.alert('Recording VLASS track.')
+            
+            else:
+                self.u.alert('Not a VLASS track or a VLASS calibrator.')
+                
 
-                    # Request new targets around phase center
-                    self.interface.request_targets(
-                        TARGETS_CHAN, 
-                        ts, 
-                        'VLASS', 
-                        ra_c, 
-                        dec_c, 
-                        fcent
-                        )
-                    
-                    # Instruct recording to start
-
-
-            if msg['data'] == 'off_source':
-
-                # Stop recording
 
     def offset_ra(self, angle, ra, dec):
         """Return new RA given a separation.
