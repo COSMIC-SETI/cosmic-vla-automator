@@ -265,6 +265,36 @@ class Interface(object):
         else:
             return []
 
+    def telescope_state(self, stragglers=2, antenna_hash='META_flagAnt', 
+        on_key='on_source'):
+        """Retrieve the current state of the telescope. This must be 
+        achieved by looking at which antennas are actually observing
+        as expected. 
+        States include:
+            unconfigured: no antennas assigned to an observation
+            on_source: on source antennas >= off source antennas - stragglers
+            off_source: on source antennas < off source antennas - stragglers
+        Args:
+            stragglers (int): number of off-source stragglers permitted
+            when considering the telescope to be on source.  
+            antenna_hash (str): hash containing antenna status lists.
+            on_key (str): key for the list of on-source antennas. 
+        Returns: 
+            state (str): telescope state. 
+        """ 
+        # Max list of antennas expected 
+        antennas = self.expected_antennas()
+        if len(antennas) > 0:
+            # Retrieve on source antennas:
+            on_source = self.on_source_antennas()
+            if len(on_source) >= (len(antennas) - stragglers):
+                return 'on_source'
+            else:
+                return 'off_source'
+        else:
+            self.u.alert('Telescope unconfigured')
+            return 'unconfigured'
+
 def cli():
     """CLI for manual command usage.
     """
