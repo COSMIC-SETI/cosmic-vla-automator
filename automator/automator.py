@@ -103,7 +103,9 @@ class Automator(object):
         """Select coordinates based on slew_rate, coordinates and time.
         """
         # Separation since packet received (5 seconds to phase center)
-        ra_sep_start = (self.mjd_now() - t_start + 5)*slew_rate
+        # Add another buffer of 1 second (will specify tstart 1 sec in 
+        # the future)
+        ra_sep_start = (self.mjd_now() - t_start + 6)*slew_rate
         ra, dec = self.offset_ra(ra_sep_start, ra, dec)
         return ra, dec
 
