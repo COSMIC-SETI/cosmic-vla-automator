@@ -1,8 +1,14 @@
 import redis
+import time
 
 from interface import Interface
 from logger import log
 from utils import Utils
+
+from astropy.coordinates import SkyCoord
+import astropy.units as u
+
+TARGETS_CHAN = "target-selector:new-pointing"
 
 class Automator(object):
     """Automation for observations.
@@ -12,13 +18,13 @@ class Automator(object):
 
     """
 
-    def __init__(self, redis_endpoint):
+    def __init__(self, redis_endpoint, redis_channel):
         """Construct an Automator.
 
         Args:
             redis_endpoint (str): Redis endpoint (of the form
             <host IP address>:<port>)
-        """
+        """ 
         redis_host, redis_port = redis_endpoint.split(':')
         # Redis connection:
         self.r = redis.StrictRedis(
@@ -33,73 +39,72 @@ class Automator(object):
             redis_host,
             redis_port
         )
-
-        self.hash_callback_map = {
-            "observations_possible": self.telescope_state_change,
-            "observation": self.recording_state_change
-        }
+        self.channel = redis_channel
 
     def start(self):
-        """Start the automator. Actions to be taken depend on the incoming
-        observational stage messages on the appropriate Redis channel.
-        """
-
+        """Start the automator. Actions to be taken depend on the incoming 
+        observational stage messages on the appropriate Redis channel. 
+        """   
+        
         self.u.alert('Starting up...')
         ps = self.r.pubsub(ignore_subscribe_messages=True)
+        ps.subscribe(self.channel)
 
-        # Listen to antenna station key to compare allocated antennas with
-        # on-source antennas to determine recording readiness
-        self.u.alert('Listening to telescope state...')
-        for hashname in self.hash_callback_map.keys():
-            ps.subscribe(f'__keyspace@0__:{hashname}')
+        for msg in ps.listen():
 
-        # Get the ball rolling
-        self.interface.command_observation_possible(
-            self.hashname_obspossible
-        )
+            # Upon receiving a new alert message, 
+            # check if the telescope is tracking
+            if msg['data'] == 'on_source':
 
-        # Check incoming messages.
-        for updated_key in ps.listen():
-            if updated_key['data'] == 'hset':
-                # Check which hash was updated (note, we can only detect if
-                # entire hash was updated)
-                hashname = updated_key['channel'].split(':', 1)[1]
+                # Check if VLASS observation:
+                if self.interface.is_vlass_calibrator():
+                   # Record (for how long?)
 
-                if hashname in self.hash_callback_map:
-                    self.hash_callback_map[hashname]()
+                if self.interface.is_vlass_track():
+                    
+                    # Retrieve metadata:
+                    ra, dec, fcent, ra_rate, ts = self.interface.vlass_metadata()
+
+                    # Calculate phase center:
+                    # Using VLASS standard slew rate of 3.3 arcmin/sec (0.055 deg/sec) 
+                    # until ra_rate units are understood
+                    ra_c, dec_c = self.select_phase_center(0.055, ts, ra, dec)
+                    self.r.set('phase_center_ra', '{ra_c}')
+                    self.r.set('phase_center_dec', '{dec_c}')
+
+                    # Request new targets around phase center
+                    self.interface.request_targets(
+                        TARGETS_CHAN, 
+                        ts, 
+                        'VLASS', 
+                        ra_c, 
+                        dec_c, 
+                        fcent
+                        )
+                    
+                    # Instruct recording to start
 
 
-    def telescope_state_change(self):
-        """Actions to take if telescope state changes.
+            if msg['data'] == 'off_source':
+
+                # Stop recording
+
+    def offset_ra(self, angle, ra, dec):
+        """Return new RA given a separation.
         """
+        start = SkyCoord(ra, dec, units="deg")
+        offset = start.directional_offset_by(90*u.deg, angle*u.deg)
+        return offset.ra.degree, offset.dec.degree
 
-        # Retrieve response:
-        observation_possible = self.interface.reflect_observation_possible()
-        if observation_possible is None:
-            self.interface.command_observation_possible()
-        else:
-            self.interface.command_observation(
-                observation_possible
-            )
+    def mjd_now(self):
+        return time.time()/86400.0 + 40587.0
 
-
-    def recording_state_change(self):
-        """Actions to take if recording state changes.
-
+    def select_phase_center(self, slew_rate, t_start, ra, dec):
+        """Select coordinates based on slew_rate, coordinates and time.
         """
-        observation_state = self.interface.reflect_observation()
-        if observation_state == "Pending":
-            return
+        # Separation since packet received (5 seconds to phase center)
+        ra_sep_start = (self.mjd_now() - t_start + 5)*slew_rate
+        ra, dec = self.offset_ra(ra_sep_start, ra, dec)
+        return ra, dec
 
-        if observation_state == "Succeeded":
-            self.u.alert("Observation completed.")
-        elif observation_state == "Failed":
-            self.u.alert("Observation failed!")
-        else:
-            raise ValueError(
-                "`reflect_observation` Interface-method returned unrecognised "
-                f"value: {observation_state}"
-            )
 
-        # Previous completed, restart the cycle
-        self.interface.command_observation_possible()
