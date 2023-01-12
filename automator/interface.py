@@ -236,9 +236,34 @@ class Interface(object):
             "postprocess":"skip",
             "start_epoch_seconds":tstart,
             "duration_seconds":duration_sec,
-            "hashpipe_keyvalues":{"PROJID":"COSMIC_TEST"}
+            "hashpipe_keyvalues":{"PROJID":projid}
         }
         self.redis_obj.set('observationRecord', json.dumps(rec_dict))
+    
+    def stop_all(self):
+        """Wrapper to stop all recording across all nodes. 
+        """
+        hashpipe_recordStop(redis_obj=redis_obj)
+
+    def expected_antennas(self, meta_hash='META', antenna_key='station'):
+        """Retrieve the list of antennas that are expected to be used 
+        for the current observation.
+        """
+        antennas = self.u.hget_decoded(self.r, meta_hash, antenna_key)
+        # Convert to list:
+        if antennas is not None:
+            return antennas
+        else:
+            return []
+
+    def on_source_antennas(self, ant_hash='META_flagAnt', on_key='on_source'):
+        """Retrieve the list of on-source antennas.
+        """
+        on_source = self.u.hget_decoded(self.r, ant_hash, on_key)
+        if on_source is not None:
+            return on_source
+        else:
+            return []
 
 def cli():
     """CLI for manual command usage.
