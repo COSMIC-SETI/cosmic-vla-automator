@@ -20,32 +20,16 @@ def cli(args = sys.argv[0]):
                         type = str,
                         default = 'META_flagAnt', 
                         help = 'Antenna flag key.')
-    parser.add_argument('--daq_domain', 
-                        type = str,
-                        default = 'hashpipe', 
-                        help = 'DAQ domain')
-    parser.add_argument('--duration', 
-                        type = int,
-                        default = '60', 
-                        help = 'Recording duration, in seconds')
-    parser.add_argument('--instances',
-                        nargs='*',
-                        action='store',
-                        default = None,
-                        help = 'Available instances')
     if(len(sys.argv[1:]) == 0):
         parser.print_help()
         parser.exit()
     args = parser.parse_args()
     main(redis_endpoint = args.redis_endpoint, 
          antenna_key = args.antenna_key,
-         daq_domain = args.daq_domain,
-         duration = args.duration,
-         instances = args.instances
          )
 
     
-def main(redis_endpoint, antenna_key, daq_domain, duration, instances):
+def main(redis_endpoint, antenna_key):
     """Starts the automator process.
     
     Args:
@@ -57,11 +41,10 @@ def main(redis_endpoint, antenna_key, daq_domain, duration, instances):
         None    
     """
     set_logger('DEBUG')
-    Automation = Automator(redis_endpoint, 
-                           antenna_key, 
-                           instances, 
-                           daq_domain, 
-                           duration)
+    Automation = Automator(
+        redis_endpoint,
+        antenna_key
+    )
     Automation.start()
 
 if(__name__ == '__main__'):
