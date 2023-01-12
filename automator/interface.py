@@ -4,7 +4,7 @@ import inspect
 import json
 
 from logger import log
-from utils import Utils
+from utils import Utils 
 
 from cosmic.observations.record import record as cosmic_record, hashpipe_recordStop
 from cosmic.hashpipe_aux import HashpipeKeyValues
@@ -23,14 +23,15 @@ class Interface(object):
 
     def __init__(self, redis_host, redis_port):
         try:
-            self.redis_obj = redis.StrictRedis(
+            self.r = redis.StrictRedis(
                 host=redis_host,
                 port=redis_port,
                 decode_responses=True
             )
-            self.redis_pubsub = self.redis_obj.pubsub(ignore_subscribe_messages=True)
+            self.redis_pubsub = self.r.pubsub(ignore_subscribe_messages=True)
         except:
             log.info('Failed to connect to Redis')
+        self.u = Utils()
 
 
     def _execute_with_response_in_key(self,
@@ -46,7 +47,7 @@ class Interface(object):
         Params
         ------
         func: Callable(**kwargs)
-            The function to execute, is given the kwarg `redis_obj=self.redis_obj`
+            The function to execute, is given the kwarg `redis_obj=self.r`
         redis_key: str
             The redis-key that is subscribed to before `func` is executed, 
         message_limit: int = 5
@@ -57,11 +58,11 @@ class Interface(object):
         
         Return
         ------
-        str: the value of the redis_key (`self.redis_obj.get(redis_key)`)
+        str: the value of the redis_key (`self.r.get(redis_key)`)
         """
         channel = f"__keyspace@0__:{redis_key}"
         self.redis_pubsub.subscribe(channel)
-        func(redis_obj=self.redis_obj)
+        func(r=self.r)
         while message_limit > 0:
             message = self.redis_pubsub.get_message(timeout=get_message_timeout)
             message_limit -= 1
@@ -75,7 +76,7 @@ class Interface(object):
         self.redis_pubsub.unsubscribe(channel)
         if message_limit <= 0:
             raise RuntimeError(f"Message limit reached while waiting for a response on {channel}: {message_limit} * {get_message_timeout} seconds.")
-        return self.redis_obj.get(redis_key)
+        return self.r.get(redis_key)
 
 
     def internal_conditions(self):
@@ -91,7 +92,7 @@ class Interface(object):
         """
 
         response = self._execute_with_response_in_key(
-            lambda **kwargs: kwargs["redis_obj"].set("observationQuery", "?"),
+            lambda **kwargs: kwargs["r"].set("observationQuery", "?"),
             "observationPossibilities"
         )
 
@@ -113,7 +114,7 @@ class Interface(object):
         """
         
         response = self._execute_with_response_in_key(
-            lambda **kwargs: kwargs["redis_obj"].set("observationExecute", "!"),
+            lambda **kwargs: kwargs["r"].set("observationExecute", "!"),
             "observationExecutingOn"
         )
         return response.split(';')
@@ -135,11 +136,11 @@ class Interface(object):
             List of instances which are recording successfully. 
         """
         hashipe_targets = [
-            HashpipeKeyValues(*instance.split('/'), self.redis_obj)
+            HashpipeKeyValues(*instance.split('/'), self.r)
             for instance in instances
         ]
         cosmic_record(
-            self.redis_obj,
+            self.r,
             duration,
             hashpipe_kv_dict = {
                 'PROJID': rec_dir
@@ -161,7 +162,7 @@ class Interface(object):
         """
         hashpipe_recordStop(
             [
-                HashpipeKeyValues(*instance.split('/'), self.redis_obj)
+                HashpipeKeyValues(*instance.split('/'), self.r)
                 for instance in instances
             ]
         )
@@ -182,9 +183,9 @@ class Interface(object):
         """Check if current observation is a VLASS calibration observation of
         a fixed RA/Dec.
         """
-        intents = self.u.hget_decoded(self.r, 'META', 'intents')
+        intents = self.u.hget_decoded(self.r, 'META', 'intents')        
         scan_intent = intents['ScanIntent']
-        if 'CALIBRATE' in scan_intent:
+        if self.is_vlass_obs() and 'CALIBRATE' in scan_intent:
             return True
         else:
             return False
@@ -194,7 +195,7 @@ class Interface(object):
         """
         intents = self.u.hget_decoded(self.r, 'META', 'intents')
         scan_intent = intents['ScanIntent']
-        if scan_intent == 'OBSERVE_TARGET':
+        if self.is_vlass_obs() and scan_intent == 'OBSERVE_TARGET':
             return True
         else:
             return False
@@ -227,7 +228,7 @@ class Interface(object):
             dec_deg,
             fecenter
         )
-        self.redis_obj.publish(new_targets_chan, msg)
+        self.r.publish(new_targets_chan, msg)
 
     def record_minimal(self, tstart, duration_sec, projid):
         """Minimal initiation of recording. 
@@ -238,12 +239,12 @@ class Interface(object):
             "duration_seconds":duration_sec,
             "hashpipe_keyvalues":{"PROJID":projid}
         }
-        self.redis_obj.set('observationRecord', json.dumps(rec_dict))
+        self.r.set('observationRecord', json.dumps(rec_dict))
     
     def stop_all(self):
         """Wrapper to stop all recording across all nodes. 
         """
-        hashpipe_recordStop(redis_obj=redis_obj)
+        hashpipe_recordStop(redis_obj=r)
 
     def expected_antennas(self, meta_hash='META', antenna_key='station'):
         """Retrieve the list of antennas that are expected to be used 
