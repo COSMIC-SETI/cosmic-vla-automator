@@ -1,6 +1,7 @@
 import redis
 import logging
 import inspect
+import json
 
 from logger import log
 from utils import Utils
@@ -227,6 +228,17 @@ class Interface(object):
             fecenter
         )
         self.redis_obj.publish(new_targets_chan, msg)
+
+    def record_minimal(self, tstart, duration_sec, projid):
+        """Minimal initiation of recording. 
+        """
+        rec_dict = {
+            "postprocess":"skip",
+            "start_epoch_seconds":tstart,
+            "duration_seconds":duration_sec,
+            "hashpipe_keyvalues":{"PROJID":"COSMIC_TEST"}
+        }
+        self.redis_obj.set('observationRecord', json.dumps(rec_dict))
 
 def cli():
     """CLI for manual command usage.
