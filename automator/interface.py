@@ -172,9 +172,9 @@ class Interface(object):
         """Check if current observation is a VLASS observation. 
         """
         # VLASS project IDs are TSKY0001 or VLASS*
-        intents = self.u.hget_decoded(self.r, 'META', 'intents')
-        projid = intents['ProjectID']
-        if projid == 'TSKY0001' or 'VLASS' in projid:
+        scan_id = self.u.hget_decoded(self.r, 'META', 'scanid')
+        log.info(scan_id)
+        if 'TSKY0001' in scan_id or 'VLASS' in scan_id:
             return True
         else:
             return False
@@ -195,6 +195,7 @@ class Interface(object):
         """
         intents = self.u.hget_decoded(self.r, 'META', 'intents')
         scan_intent = intents['ScanIntent']
+        log.info(scan_intent)
         if self.is_vlass_obs() and scan_intent == 'OBSERVE_TARGET':
             return True
         else:
@@ -203,14 +204,14 @@ class Interface(object):
     def vlass_metadata(self):
         """Retrieve VLASS metadata for vlass track observations.
         """
-        ra = self.u.hget_decoded(self.r, 'META', 'ra')
-        dec = self.u.hget_decoded(self.r, 'META', 'dec')
+        ra = self.u.hget_decoded(self.r, 'META', 'ra_deg')
+        dec = self.u.hget_decoded(self.r, 'META', 'dec_deg')
         # For the purposes of target selection, return the highest 
         # frequency for now (enforce same set of targets for both)
-        fcent = max(self.u.hget_decoded(self.r, 'META', 'dec'))
+        fcent = max(self.u.hget_decoded(self.r, 'META', 'fcents'))
         intents = self.u.hget_decoded(self.r, 'META', 'intents')
         ra_rate = intents['AntennaRaRate']
-        ts = intents['AntennaRaRatet0']
+        ts = intents['AntennaRatet0']
         return ra, dec, fcent, ra_rate, ts
 
     def request_targets(self, new_targets_chan, ts, src, ra_deg, dec_deg, fecenter):
@@ -244,7 +245,7 @@ class Interface(object):
     def stop_all(self):
         """Wrapper to stop all recording across all nodes. 
         """
-        hashpipe_recordStop(redis_obj=r)
+        hashpipe_recordStop(redis_obj=self.r)
 
     def expected_antennas(self, meta_hash='META', antenna_key='station'):
         """Retrieve the list of antennas that are expected to be used 
