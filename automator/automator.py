@@ -99,10 +99,12 @@ class Automator(object):
     def proc_update(self):
         """Checks current processing state. 
         """
+        status_lists = self.u.pooled_status(self.r, 'Automator:proc_status')
 
     def rec_update(self):
         """Checks current recording state.
         """
+        status_lists = self.u.pooled_status(self.r, 'Automator:proc_status')
 
     def rec_state_change(self, new_state):
         """Actions to take if the recording state changes:
