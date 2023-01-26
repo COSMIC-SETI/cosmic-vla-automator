@@ -50,8 +50,11 @@ class Automator(object):
         """   
         
         self.u.alert('Starting up...')
+        self.ps = self.r.pubsub(ignore_subscribe_messages=True)
+        self.u.alert('Listening for VLASS, processing and recording updates.')
+        self.ps.subscribe(self.redis_channel)
 
-        # Check current states:
+        # Check current states on startup:
         # Are we processing?
         self.proc_update()
 
@@ -63,10 +66,8 @@ class Automator(object):
             self.vlass_state = True
             self.vlass_state_change(True)
 
-        self.ps = self.r.pubsub(ignore_subscribe_messages=True)
+        # Listen for updates as observing progresses
         self.u.alert('Listening for VLASS, processing and recording updates.')
-        self.ps.subscribe(self.redis_channel)
-
         for msg in ps.listen():
 
             # Awaiting an active VLASS track:
@@ -95,16 +96,36 @@ class Automator(object):
             else:
                 self.u.alert('Processing complete, but VLASS is no longer tracking.')
                 self.u.alert('Waiting for a new VLASS track.')
+        elif new_state and not self.proc_state:
+            self.proc_status = True
 
     def proc_update(self):
         """Checks current processing state. 
         """
-        status_lists = self.u.pooled_status(self.r, 'Automator:proc_status')
+        status_lists, total = self.u.pooled_status(self.r, 'Automator:proc_status')
+        # For now, wait for ALL nodes to complete
+        if len(status_lists['idling']) == total and self.proc_status:
+            self.u.alert('Processing complete.')
+            self.proc_state_change(False)
+        elif len(status_lists['idling']) < total and self.proc_status:
+            self.u.alert('Some processing nodes not in idle state.')
+        elif len(status_lists['processing'] > 0) and not self.proc_status:
+            self.proc_state_change(True)
+            
+
 
     def rec_update(self):
         """Checks current recording state.
         """
-        status_lists = self.u.pooled_status(self.r, 'Automator:proc_status')
+        status_lists, total = self.u.pooled_status(self.r, 'Automator:rec_status')
+        # For now, wait for ALL nodes to complete
+        if len(status_lists['idling']) == total and self.rec_status:
+            self.u.alert('Recording complete.')
+            self.rec_state_change(False)
+        elif len(status_lists['idling']) < total and self.rec_status:
+            self.u.alert('Some processing nodes not in idle state.')
+        elif len(status_lists['recording'] > 0) and not self.rec_status:
+            self.rec_state_change(True)
 
     def rec_state_change(self, new_state):
         """Actions to take if the recording state changes:
