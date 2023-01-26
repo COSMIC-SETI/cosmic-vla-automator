@@ -54,6 +54,19 @@ class Utils(object):
         val = self.hget_decoded(r, status_hash, key)
         return val
 
+    def pooled_status(self, r, hash_name):
+        """Return pooled status lists
+        """
+        instance_list = r.hkeys(hash_name)
+        status_types = {}
+        for instance in instance_list:
+            status = self.hget_decoded(r, hash_name, instance)
+            if not status in status_types:
+                status_types[status] = [instance]
+            else:
+                status_types[status].append(instance)
+        return status_types
+
     def timestamp(self):
         """Report UTC timestamp for slack alerts in ISO format.
         """
