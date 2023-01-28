@@ -58,14 +58,20 @@ class Utils(object):
         """Return pooled status lists
         """
         instance_list = r.hkeys(hash_name)
+        active_instances = 0
         status_types = {}
         for instance in instance_list:
             status = self.hget_decoded(r, hash_name, instance)
+            # If status is None ('null' in redis), assume instance is offline.
+            if status is None:
+                continue
             if not status in status_types:
                 status_types[status] = [instance]
+                active_instances += 1
             else:
                 status_types[status].append(instance)
-        return status_types
+                active_instances += 1
+        return status_types, active_instances
 
     def timestamp(self):
         """Report UTC timestamp for slack alerts in ISO format.
