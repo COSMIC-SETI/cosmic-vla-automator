@@ -68,7 +68,7 @@ class Automator(object):
 
         # Listen for updates as observing progresses
         self.u.alert('Listening for VLASS, processing and recording updates.')
-        for msg in ps.listen():
+        for msg in self.ps.listen():
 
             # Awaiting an active VLASS track:
             if msg['data'] == 'vlass-track':
@@ -104,13 +104,17 @@ class Automator(object):
         """
         status_lists, total = self.u.pooled_status(self.r, 'Automator:proc_status')
         # For now, wait for ALL nodes to complete
-        if len(status_lists['idling']) == total and self.proc_status:
-            self.u.alert('Processing complete.')
-            self.proc_state_change(False)
-        elif len(status_lists['idling']) < total and self.proc_status:
-            self.u.alert('Some processing nodes not in idle state.')
-        elif len(status_lists['processing'] > 0) and not self.proc_status:
+        if 'idling' not in status_lists:
+            # Need this temporarily since all states not known yet
+            # TODO: Remove once states are known
             self.proc_state_change(True)
+        elif len(status_lists['idling']) == total and self.proc_state:
+            self.u.alert('No current processing.')
+            self.proc_state_change(False)
+        elif len(status_lists['idling']) < total and self.proc_state:
+            self.u.alert('Some processing nodes not in idle state.')
+        #elif len(status_lists['processing'] > 0) and not self.proc_status:
+        #    self.proc_state_change(True)
             
 
 
@@ -119,12 +123,12 @@ class Automator(object):
         """
         status_lists, total = self.u.pooled_status(self.r, 'Automator:rec_status')
         # For now, wait for ALL nodes to complete
-        if len(status_lists['idling']) == total and self.rec_status:
-            self.u.alert('Recording complete.')
+        if len(status_lists['idling']) == total and self.rec_state:
+            self.u.alert('No current recording.')
             self.rec_state_change(False)
-        elif len(status_lists['idling']) < total and self.rec_status:
+        elif len(status_lists['idling']) < total and self.rec_state:
             self.u.alert('Some processing nodes not in idle state.')
-        elif len(status_lists['recording'] > 0) and not self.rec_status:
+        elif len(status_lists['recording'] > 0) and not self.rec_state:
             self.rec_state_change(True)
 
     def rec_state_change(self, new_state):
